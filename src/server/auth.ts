@@ -26,6 +26,7 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
+      email: string
       // ...other properties
       // role: UserRole;
     } & DefaultSession["user"];
@@ -59,10 +60,7 @@ export const authOptions: NextAuthOptions = {
     verificationTokensTable: verificationTokens,
   }) as Adapter,
   providers: [
-    DiscordProvider({
-      clientId: env.DISCORD_CLIENT_ID,
-      clientSecret: env.DISCORD_CLIENT_SECRET,
-    }),
+
     /**
      * ...add more providers here.
      *
