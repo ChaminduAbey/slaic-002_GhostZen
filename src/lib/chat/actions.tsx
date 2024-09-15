@@ -35,6 +35,8 @@ import { saveChat } from '@/app/actions'
 import { SpinnerMessage, UserMessage } from '@/components/stocks/message'
 import { Chat, Message } from '@/lib/types'
 import { getServerAuthSession } from '@/server/auth'
+import { PollCard } from '@/components/poll/poll-card'
+import { ManifestoComparator } from '@/components/manifesto-comparator'
 
 async function confirmPurchase(symbol: string, price: number, amount: number) {
     'use server'
@@ -105,7 +107,7 @@ async function confirmPurchase(symbol: string, price: number, amount: number) {
     }
 }
 
-async function submitUserMessage(content: string) {
+async function submitUserMessageOld(content: string) {
     'use server'
 
     const aiState = getMutableAIState<typeof AI>()
@@ -474,6 +476,192 @@ async function submitUserMessage(content: string) {
                     )
                 }
             }
+        }
+    })
+
+    return {
+        id: nanoid(),
+        display: result.value
+    }
+}
+
+async function submitUserMessage(content: string) {
+    'use server'
+
+    const aiState = getMutableAIState<typeof AI>()
+
+    aiState.update({
+        ...aiState.get(),
+        messages: [
+            ...aiState.get().messages,
+            {
+                id: nanoid(),
+                role: 'user',
+                content
+            }
+        ]
+    })
+
+    let textStream: undefined | ReturnType<typeof createStreamableValue<string>>
+    let textNode: undefined | React.ReactNode
+
+    const result = await streamUI({
+        model: openai('gpt-3.5-turbo'),
+        initial: <SpinnerMessage />,
+        system: `\
+    You are a election related conversation bot. 
+    You and the user can dicuss regarding the political parties election, take a poll for the party they will vote for, in the UI.
+    
+    Messages inside [] means that it's a UI element or a user event. For example:
+    - "[User was shown poll]" means that an UI of the poll was shown to user.
+    - "[User was shown comparator in the UI between Ranil and Anura]" mean the an UI of the manifesto comparator was shown to the user
+    
+    If the user requests to vote in the poll, call \`showPoll\` to show the poll UI.
+    If user want to compare a the political manifesto of canditates, call \'showManifestoComparator'\ to show the comparator UI
+    If the user complete another impossible task or unrelated task, respond that you are a demo and cannot do that.
+    
+    Besides that, you can also chat with users and explain to me them any things they are not clear.`,
+        messages: [
+            ...aiState.get().messages.map((message: any) => ({
+                role: message.role,
+                content: message.content,
+                name: message.name
+            }))
+        ],
+        text: ({ content, done, delta }) => {
+            if (!textStream) {
+                textStream = createStreamableValue('')
+                textNode = <BotMessage content={textStream.value} />
+            }
+
+            if (done) {
+                textStream.done()
+                aiState.done({
+                    ...aiState.get(),
+                    messages: [
+                        ...aiState.get().messages,
+                        {
+                            id: nanoid(),
+                            role: 'assistant',
+                            content
+                        }
+                    ]
+                })
+            } else {
+                textStream.update(delta)
+            }
+
+            return textNode
+        },
+        tools: {
+            showPoll: {
+                description: 'Show user the poll ui for upcoming election',
+                parameters: z.object({
+
+                }),
+                generate: async function* ({ }) {
+                    yield (
+                        <BotCard>
+                            <StocksSkeleton />
+                        </BotCard>
+                    )
+
+                    await sleep(1000)
+
+                    const toolCallId = nanoid()
+
+                    aiState.done({
+                        ...aiState.get(),
+                        messages: [
+                            ...aiState.get().messages,
+                            {
+                                id: nanoid(),
+                                role: 'assistant',
+                                content: [
+                                    {
+                                        type: 'tool-call',
+                                        toolName: 'showPoll',
+                                        toolCallId,
+                                        args: {}
+                                    }
+                                ]
+                            },
+                            {
+                                id: nanoid(),
+                                role: 'tool',
+                                content: [
+                                    {
+                                        type: 'tool-result',
+                                        toolName: 'showPoll',
+                                        toolCallId,
+                                        result: "User was shown poll"
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+
+                    return (
+                        <BotCard>
+                            <PollCard />
+                        </BotCard>
+                    )
+                }
+            },
+            showManifestoComparator: {
+                description: 'Show users the manifesto comparator between political parties',
+                parameters: z.object({
+
+                }),
+                generate: async function* ({ }) {
+                    yield (
+                        <BotCard>
+                            <StocksSkeleton />
+                        </BotCard>
+                    )
+
+                    await sleep(1000)
+
+                    const toolCallId = nanoid()
+
+                    aiState.done({
+                        ...aiState.get(),
+                        messages: [
+                            ...aiState.get().messages,
+                            {
+                                id: nanoid(),
+                                role: 'assistant',
+                                content: [
+                                    {
+                                        type: 'tool-call',
+                                        toolName: 'showManifestoComparator',
+                                        toolCallId,
+                                        args: {}
+                                    }
+                                ]
+                            },
+                            {
+                                id: nanoid(),
+                                role: 'tool',
+                                content: [
+                                    {
+                                        type: 'tool-result',
+                                        toolName: 'showManifestoComparator',
+                                        toolCallId,
+                                        result: "User was shown comparator in the UI between Ranil and Anura"
+                                    }
+                                ]
+                            }
+                        ]
+                    })
+
+                    return (
+                        <BotCard>
+                            <ManifestoComparator />
+                        </BotCard>
+                    )
+                }
+            },
         }
     })
 
