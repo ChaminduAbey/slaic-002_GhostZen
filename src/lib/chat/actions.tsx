@@ -703,50 +703,21 @@ async function voteForCandidate(candiateName: string) {
             "Who is leading in the poll?",
         ],
     })
+}
+
+async function clearChat() {
+    'use server'
+
+    const aiState = getMutableAIState<typeof AI>()
 
 
-    return;
-
-    const result = await streamUI({
-        model: openai('gpt-3.5-turbo'),
-        initial: <SpinnerMessage />,
-        system: `\
-    You are an assistant to an election related conversation bot. 
-    The bot and the user can dicuss regarding the political parties election, take a poll for the party they will vote for, in the UI.
-    
-    Messages inside [] means that it's a UI element or a user event. For example:
-    - "[User was shown poll]" means that an UI of the poll was shown to user.
-    - "[User was shown comparator in the UI between Ranil and Anura]" mean the an UI of the manifesto comparator was shown to the user
-    
-    Your job is to provide suggestions for the actions the user can take next`,
+    aiState.done({
+        ...aiState.get(),
         messages: [
-            ...aiState.get().messages.map((message: any) => ({
-                role: message.role,
-                content: message.content,
-                name: message.name
-            }))
         ],
-        text: ({ content, done, delta }) => {
-            if (!textStream) {
-                textStream = createStreamableValue('')
-                textNode = <BotMessage content={textStream.value} />
-            }
-
-            if (done) {
-                textStream.done()
-                console.log("Suggestions text, " + content);
-            } else {
-                textStream.update(delta)
-            }
-
-            return textNode
-        },
-    });
-
-    return {
-        id: nanoid(),
-        display: result.value
-    }
+        suggestions: [
+        ],
+    })
 }
 
 export type AIState = {
@@ -764,7 +735,8 @@ export const AI = createAI<AIState, UIState>({
     actions: {
         submitUserMessage,
         confirmPurchase,
-        voteForCandidate
+        voteForCandidate,
+        clearChat
     },
     initialUIState: [],
     initialAIState: { chatId: nanoid(), messages: [], suggestions: [] },
