@@ -538,6 +538,10 @@ async function submitUserMessage(content: string) {
                 textStream.done()
                 aiState.done({
                     ...aiState.get(),
+                    suggestions: [
+                        "Vote in poll",
+                        "Compare manifesto between Ranil and Sajith"
+                    ],
                     messages: [
                         ...aiState.get().messages,
                         {
@@ -572,6 +576,7 @@ async function submitUserMessage(content: string) {
 
                     aiState.done({
                         ...aiState.get(),
+                        suggestions: [],
                         messages: [
                             ...aiState.get().messages,
                             {
@@ -626,6 +631,10 @@ async function submitUserMessage(content: string) {
 
                     aiState.done({
                         ...aiState.get(),
+                        suggestions: [
+                            "What are the main differences between manifesto ?",
+                            "Who is more gay ?"
+                        ],
                         messages: [
                             ...aiState.get().messages,
                             {
@@ -671,9 +680,79 @@ async function submitUserMessage(content: string) {
     }
 }
 
+
+async function voteForCandidate(candiateName: string) {
+    'use server'
+
+    const aiState = getMutableAIState<typeof AI>()
+
+    let textStream: undefined | ReturnType<typeof createStreamableValue<string>>
+    let textNode: undefined | React.ReactNode
+
+    aiState.done({
+        ...aiState.get(),
+        messages: [
+            ...aiState.get().messages,
+            {
+                id: nanoid(),
+                role: 'system',
+                content: `[User has voted ${candiateName}. User is now shown the results for poll. The results are for Anura - 186, Ranil - 305, Sajith - 237]`
+            }
+        ],
+        suggestions: ["Break down the results of the poll",
+            "Who is leading in the poll?",
+        ],
+    })
+
+
+    return;
+
+    const result = await streamUI({
+        model: openai('gpt-3.5-turbo'),
+        initial: <SpinnerMessage />,
+        system: `\
+    You are an assistant to an election related conversation bot. 
+    The bot and the user can dicuss regarding the political parties election, take a poll for the party they will vote for, in the UI.
+    
+    Messages inside [] means that it's a UI element or a user event. For example:
+    - "[User was shown poll]" means that an UI of the poll was shown to user.
+    - "[User was shown comparator in the UI between Ranil and Anura]" mean the an UI of the manifesto comparator was shown to the user
+    
+    Your job is to provide suggestions for the actions the user can take next`,
+        messages: [
+            ...aiState.get().messages.map((message: any) => ({
+                role: message.role,
+                content: message.content,
+                name: message.name
+            }))
+        ],
+        text: ({ content, done, delta }) => {
+            if (!textStream) {
+                textStream = createStreamableValue('')
+                textNode = <BotMessage content={textStream.value} />
+            }
+
+            if (done) {
+                textStream.done()
+                console.log("Suggestions text, " + content);
+            } else {
+                textStream.update(delta)
+            }
+
+            return textNode
+        },
+    });
+
+    return {
+        id: nanoid(),
+        display: result.value
+    }
+}
+
 export type AIState = {
     chatId: string
-    messages: Message[]
+    messages: Message[],
+    suggestions: string[]
 }
 
 export type UIState = {
@@ -684,10 +763,11 @@ export type UIState = {
 export const AI = createAI<AIState, UIState>({
     actions: {
         submitUserMessage,
-        confirmPurchase
+        confirmPurchase,
+        voteForCandidate
     },
     initialUIState: [],
-    initialAIState: { chatId: nanoid(), messages: [] },
+    initialAIState: { chatId: nanoid(), messages: [], suggestions: [] },
     onGetUIState: async () => {
         'use server'
 

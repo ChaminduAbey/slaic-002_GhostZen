@@ -5,13 +5,16 @@ import { Button } from '../ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
 import React from 'react'
 import { PollResult } from "./poll-result"
+import { useActions, useAIState, useUIState } from 'ai/rsc'
 
 export const PollCard = () => {
     const [isVoted, setIsVoted] = React.useState(false)
+    const { voteForCandidate } = useActions()
 
     const onVote = () => {
         setTimeout(() => {
             setIsVoted(true)
+            voteForCandidate("Ranil")
         }, 3000)
     }
 

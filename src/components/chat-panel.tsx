@@ -8,7 +8,7 @@ import { IconShare } from '@/components/ui/icons'
 import { FooterText } from '@/components/footer'
 import { ChatShareDialog } from '@/components/chat-share-dialog'
 import { useAIState, useActions, useUIState } from 'ai/rsc'
-import type { AI } from '@/lib/chat/actions'
+import type { AI, AIState } from '@/lib/chat/actions'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './stocks/message'
 
@@ -31,7 +31,7 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [aiState] = useAIState()
   const [messages, setMessages] = useUIState<typeof AI>()
-  const { submitUserMessage } = useActions()
+  const { submitUserMessage, } = useActions()
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false)
 
   const exampleMessages = [
@@ -70,9 +70,8 @@ export function ChatPanel({
             exampleMessages.map((example, index) => (
               <div
                 key={example.heading}
-                className={`cursor-pointer rounded-lg border bg-white p-4 hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900 ${
-                  index > 1 && 'hidden md:block'
-                }`}
+                className={`cursor-pointer rounded-lg border bg-white p-4 hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900 ${index > 1 && 'hidden md:block'
+                  }`}
                 onClick={async () => {
                   setMessages(currentMessages => [
                     ...currentMessages,
@@ -129,6 +128,8 @@ export function ChatPanel({
           </div>
         ) : null}
 
+        <SuggestionsPanel />
+
         <div className="space-y-4 border-t bg-background px-4 py-2 shadow-lg sm:rounded-t-xl sm:border md:py-4">
           <PromptForm input={input} setInput={setInput} />
           <FooterText className="hidden sm:block" />
@@ -136,4 +137,49 @@ export function ChatPanel({
       </div>
     </div>
   )
+}
+
+function SuggestionsPanel() {
+  const [messages, setMessages] = useUIState<typeof AI>()
+  const [aiState] = useAIState()
+  const { submitUserMessage, } = useActions()
+  console.log((aiState as AIState).suggestions)
+
+  const suggestions = (aiState as AIState).suggestions
+
+  return <div className="flex">
+    {/* {
+      aiState.suggestions?.length > 0 && (
+        
+      )
+    } */}
+
+    {suggestions.map((suggestion, index) => (
+      <div
+        key={index}
+        className={`cursor-pointer rounded-lg border bg-white p-4 hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900 ${index > 1 && 'hidden md:block'
+          }`}
+        onClick={async () => {
+          setMessages(currentMessages => [
+            ...currentMessages,
+            {
+              id: nanoid(),
+              display: <UserMessage>{suggestion}</UserMessage>
+            }
+          ])
+
+          const responseMessage = await submitUserMessage(
+            suggestion
+          )
+
+          setMessages(currentMessages => [
+            ...currentMessages,
+            responseMessage
+          ])
+        }}
+      >
+        <div className="text-sm font-semibold">{suggestion}</div>
+      </div>
+    ))}
+  </div>
 }
