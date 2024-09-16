@@ -567,7 +567,7 @@ async function submitUserMessage(content: string) {
         generate: async function* ({}) {
           yield (
             <BotCard>
-              <StocksSkeleton />
+              <LaodingSkeleton loadingTitles={['Starting Poll...']} />
             </BotCard>
           );
 

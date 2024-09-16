@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 
 function LaodingSkeleton({loadingTitles}: {loadingTitles: string[]}) {
-    const [currentText, setCurrentText] = useState('Analyzing Candidates');
+    const [currentText, setCurrentText] = useState(loadingTitles[0]);
     const texts = loadingTitles;
     const [activeIndex, setActiveIndex] = useState(0);
 
