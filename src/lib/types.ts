@@ -39,3 +39,8 @@ export interface User extends Record<string, any> {
   password: string
   salt: string
 }
+
+export interface ComparatorContent{
+  candidate: string,
+  content: string
+}

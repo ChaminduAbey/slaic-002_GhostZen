@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { customAlphabet } from 'nanoid'
 import { twMerge } from 'tailwind-merge'
+import { ComparatorContent } from './types'
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
@@ -132,3 +133,20 @@ export function subMonths(date: Date, amount: number) {
     newDate.setMonth(newDate.getMonth() - amount)
     return newDate
 }
+
+export function parseComparatorContent(input: string): ComparatorContent[] {
+    const candidatePattern = /Candidate:\s*(.*?)\nContent:\s*([\s\S]*?)(?=Candidate:|$)/g;
+    const candidates: ComparatorContent[] = [];
+  
+    let match: RegExpExecArray | null;
+    while ((match = candidatePattern.exec(input)) !== null) {
+      const candidate = match[1]!.trim();
+      const content = match[2]!.trim();
+      candidates.push({ candidate, content });
+    }
+  
+    return candidates;
+  }
+
+
+  
