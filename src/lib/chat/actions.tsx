@@ -10,6 +10,8 @@ import {
 } from 'ai/rsc'
 import { openai } from '@ai-sdk/openai'
 
+import OpenAI from 'openai'
+
 import {
     spinner,
     BotCard,
@@ -37,6 +39,8 @@ import { Chat, Message } from '@/lib/types'
 import { getServerAuthSession } from '@/server/auth'
 import { PollCard } from '@/components/poll/poll-card'
 import { ManifestoComparator } from '@/components/manifesto-comparator'
+import { useEffect } from 'react'
+import { threadId } from 'worker_threads'
 
 async function confirmPurchase(symbol: string, price: number, amount: number) {
     'use server'
@@ -623,6 +627,39 @@ async function submitUserMessage(content: string) {
                     await sleep(1000)
 
                     const toolCallId = nanoid()
+
+                    const openai = new OpenAI();
+                    
+
+                    const thread = await openai.beta.threads.create();
+                    const message = await openai.beta.threads.messages.create(thread.id, {
+                        role: "user",
+                        content: aiState.get().messages.at(-1)?.content.toString()!,
+                    });
+
+                    const run = await openai.beta.threads.runs.create(thread.id, {
+                        assistant_id: "asst_48uDzWrOVKweM0rjthgdfygv",
+                        
+                    });
+                    
+
+                    const checkStatusAndPrintMessages = async (threadId:string, runId:string) => {
+                        let runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
+                        if(runStatus.status === "completed"){
+                            let messages = await openai.beta.threads.messages.list(threadId);
+                           
+                            console.log((messages.data[0]?.content[0] as any).text.value)
+                        } else {
+                            console.log("Run is not completed yet.");
+                        }  
+                    };
+
+                    setTimeout(() => {
+                        checkStatusAndPrintMessages(thread.id, run.id)
+                    }, 120000 );
+              
+                  
+
 
                     aiState.done({
                         ...aiState.get(),
