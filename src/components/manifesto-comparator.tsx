@@ -33,20 +33,54 @@ function Manifesto(data: ComparatorContent) {
         bgColor = "bg-[#9A0B25]";
     }
 
+    // const cleanContent = data.content.replace(/【.*?】/g, '').split('\n').map((line, index) => {
+    //     if ((line.startsWith('- **') && line.endsWith('**')) || (line.startsWith('**') && line.endsWith('**'))) {
+    //         const title = line.replace(/-?\s*\*\*/g, '').trim();  
+    //         return (
+    //             <h3 key={index} className="font-bold text-lg mt-4 mb-2">
+    //                 {title}
+    //             </h3>
+    //         );
+    //     } else {
+    //         return (
+    //             <li key={index} className="text-base leading-6 mb-2">
+    //                 {line.replace('-', '').trim()}
+    //             </li>
+    //         );
+    //     }
+    // });
+
     const cleanContent = data.content.replace(/【.*?】/g, '').split('\n').map((line, index) => {
-        if ((line.startsWith('- **') && line.endsWith('**')) || (line.startsWith('**') && line.endsWith('**'))) {
-            const title = line.replace(/-?\s*\*\*/g, '').trim();  
+        if (/^\d+\.\s\*\*/.test(line)) {
+            const title = line.replace(/^\d+\.\s*\*\*/g, '').replace(/\*\*$/, '').trim();  // Remove number and '**'
             return (
                 <h3 key={index} className="font-bold text-lg mt-4 mb-2">
                     {title}
                 </h3>
             );
-        } else {
+        }
+        else if ((line.startsWith('- **') && line.endsWith('**')) || (line.startsWith('**') && (line.endsWith('**') || line.endsWith('**  ')))) {
+            const title = line.replace(/-?\s*\*\*/g, '').trim();  // Remove '- **' or '**'
+            return (
+                <h3 key={index} className="font-bold text-lg mt-4 mb-2">
+                    {title}
+                </h3>
+            );
+        } 
+        else if (line.startsWith('   -')) {
+            return (
+                <li key={index} className="text-base leading-6 ml-8 mb-2">
+                    {line.replace('   -', '').trim()}
+                </li>
+            );
+        } else if (line.startsWith('-')) {
             return (
                 <li key={index} className="text-base leading-6 mb-2">
                     {line.replace('-', '').trim()}
                 </li>
             );
+        } else {
+            return line; 
         }
     });
 

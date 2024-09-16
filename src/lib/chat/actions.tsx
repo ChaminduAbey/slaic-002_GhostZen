@@ -525,7 +525,9 @@ async function submitUserMessage(content: string) {
     
     If the user requests to vote in the poll, call \`showPoll\` to show the poll UI.
     If user want to compare a the political manifesto of canditates, call \'showManifestoComparator'\ to show the comparator UI
+    If the user wants to see the manifesto of a candidate, call \'showManifesto\' to show the manifesto UI
     If the user complete another impossible task or unrelated task, respond that you are a demo and cannot do that.
+
     
     Besides that, you can also chat with users and explain to me them any things they are not clear.`,
     messages: [
@@ -675,7 +677,7 @@ async function submitUserMessage(content: string) {
           }
 
           async function handleResponse(threadId: string, runId: string) {
-            const response = await waitForResponse(threadId, runId, 20000);
+            const response = await waitForResponse(threadId, runId, 30000);
             const data = parseComparatorContent(response);
             return data;
           }
@@ -722,6 +724,120 @@ async function submitUserMessage(content: string) {
           );
         },
       },
+
+
+
+      showManifesto: {
+        description:
+          "Show users the manifesto of a candidate",
+        parameters: z.object({}),
+        generate: async function* ({}) {
+          yield (
+            <BotCard>
+              <LaodingSkeleton
+                loadingTitles={['Analyzing Candidate', 'Analyzing Manifesto', 'Organizing Data', 'Finalizing Results', 'Almost There!']}
+              />
+            </BotCard>
+          );
+
+          await sleep(1000);
+
+          const toolCallId = nanoid();
+
+          const openai = new OpenAI();
+
+          const thread = await openai.beta.threads.create();
+          const message = await openai.beta.threads.messages.create(thread.id, {
+            role: "user",
+            content: aiState.get().messages.at(-1)?.content.toString()!,
+          });
+
+          const run = await openai.beta.threads.runs.create(thread.id, {
+            // assistant_id: "asst_48uDzWrOVKweM0rjthgdfygv",
+            assistant_id: "asst_1Ff1uvH8D5pS9nDyC7WlULKN", //Politikk Test
+          });
+
+          const checkStatusAndPrintMessages = async (
+            threadId: string,
+            runId: string,
+          ) => {
+            let runStatus = await openai.beta.threads.runs.retrieve(
+              threadId,
+              runId,
+            );
+            if (runStatus.status === "completed") {
+              let messages = await openai.beta.threads.messages.list(threadId);
+
+              console.log((messages.data[0]?.content[0] as any).text.value);
+              return (messages.data[0]?.content[0] as any).text.value;
+            } else {
+              console.log("Run is not completed yet.");
+            }
+          };
+
+          function waitForResponse(
+            threadId: string,
+            runId: string,
+            delay: number,
+          ): Promise<string> {
+            return new Promise((resolve) => {
+              setTimeout(() => {
+                const response = checkStatusAndPrintMessages(threadId, runId);
+                resolve(response);
+              }, delay);
+            });
+          }
+
+          async function handleResponse(threadId: string, runId: string) {
+            const response = await waitForResponse(threadId, runId, 30000);
+            const data = parseComparatorContent(response);
+            return data;
+          }
+
+          const data = await handleResponse(thread.id, run.id);
+          console.log(data);
+
+          aiState.done({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: "assistant",
+                content: [
+                  {
+                    type: "tool-call",
+                    toolName: "showManifestoComparator",
+                    toolCallId,
+                    args: {},
+                  },
+                ],
+              },
+              {
+                id: nanoid(),
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolName: "showManifestoComparator",
+                    toolCallId,
+                    result:
+                      "User was shown a manifesto",
+                  },
+                ],
+              },
+            ],
+          });
+
+          return (
+            <BotCard>
+              <ManifestoComparator comparisonData={data} />
+            </BotCard>
+          );
+        },
+      },
+
+
     },
   });
 
