@@ -103,8 +103,10 @@
 
 
 .thinking-container {
-    width: 200px;  /* Adjust the width based on your design */
-    height: 40px;  /* Adjust height based on text size */
+    width: 200px;
+    /* Adjust the width based on your design */
+    height: 40px;
+    /* Adjust height based on text size */
     display: flex;
     justify-content: start;
     align-items: start;
@@ -115,9 +117,14 @@
 .thinking-text {
     font-size: 16px;
     font-weight: 500;
-    color: #4d4949;
+    /* color: #4d4949; */
     position: absolute;
-    animation: moveAndFade 8s linear infinite;
+    background: linear-gradient(90deg, #ff00cc, #3333ff, #00ffcc, #ff3300);
+    background-size: 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: moveAndFade 3s linear infinite, flow 5s ease-in-out infinite;
 }
 
 @keyframes moveAndFade {
@@ -125,12 +132,29 @@
         transform: translateY(-50%);
         opacity: 0;
     }
+
     50% {
         transform: translateY(0%);
         opacity: 1;
     }
+
     100% {
         transform: translateY(50%);
         opacity: 0;
+    }
+}
+
+
+@keyframes flow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
     }
 }

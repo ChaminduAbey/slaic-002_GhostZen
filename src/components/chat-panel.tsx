@@ -100,7 +100,7 @@ export function ChatPanel({
             ))}
         </div>
 
-        {messages?.length >= 2 ? (
+        {false && messages?.length >= 2 ? (
           <div className="flex h-12 items-center justify-center">
             <div className="flex space-x-2">
               {id && title ? (
@@ -129,7 +129,7 @@ export function ChatPanel({
           </div>
         ) : null}
 
-        <SuggestionsPanel />
+        <SuggestionsPanel scrollToBottom={scrollToBottom} />
 
         <div className="space-y-4 border-t bg-background px-4 py-2 shadow-lg sm:rounded-t-xl sm:border md:py-4">
           <PromptForm input={input} setInput={setInput} />
@@ -140,7 +140,7 @@ export function ChatPanel({
   )
 }
 
-function SuggestionsPanel() {
+function SuggestionsPanel({ scrollToBottom }: { scrollToBottom: () => void }) {
   const [messages, setMessages] = useUIState<typeof AI>()
   const [aiState] = useAIState()
   const { submitUserMessage, } = useActions()
@@ -148,7 +148,7 @@ function SuggestionsPanel() {
 
   const suggestions = (aiState as AIState).suggestions
 
-  return <div className="flex">
+  return <div className="mb-4 grid grid-cols-2 gap-2 px-4 sm:px-0 mb-2">
     {/* {
       aiState.suggestions?.length > 0 && (
         
@@ -177,6 +177,8 @@ function SuggestionsPanel() {
             ...currentMessages,
             responseMessage
           ])
+
+          scrollToBottom()
         }}
       >
         <div className="text-sm font-semibold">{suggestion}</div>

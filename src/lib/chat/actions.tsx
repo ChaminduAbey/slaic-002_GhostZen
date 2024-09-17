@@ -616,6 +616,10 @@ async function submitUserMessage(content: string) {
         textStream.done();
         aiState.done({
           ...aiState.get(),
+          suggestions: [
+            "Compared to Theravada economy by Ranil, what are the measures will be taken for the economy by Anura.",
+            "What are the economic and education vision of Anura Kumara?"
+          ],
           messages: [
             ...aiState.get().messages,
             {
