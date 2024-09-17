@@ -580,10 +580,11 @@ async function submitUserMessage(content: string) {
     2. If user want to compare a the political manifesto or a particular part of manifesto of canditates , call \'showManifestoComparator'\ to show the comparator UI
     3. If the user wants to see the manifesto of a specific candidate or a particular part of manifesto, call \'showManifesto\' to show the manifesto UI
     4. If the user wants to read or fact check a news articles related to 2024 Sri Lanka Presidential Election or related to Sri Lanka Politics, call \'newsReader\' to show the news article UI
-    5. If the user asked a general question related to the 2024 presidential election or general question about candidate, respond with a suitable answer.
-    6. If the user complete another impossible task or unrelated task, respond that Sorry, I am designed only to help you with the 2024 Sri Lanka Presidential Election.
+    5. If the users wants to know how to vote in the election, call \'
+    6. If the user asked a general question related to the 2024 presidential election or general question about candidate, respond with a suitable answer.
+    7. If the user complete another impossible task or unrelated task, respond that Sorry, I am designed only to help you with the 2024 Sri Lanka Presidential Election.
 
-    7. Messages inside [] means that it's a UI element or a user event. For example:
+    8. Messages inside [] means that it's a UI element or a user event. For example:
     - "[User was shown poll]" means that an UI of the poll was shown to user.
     - "[User was shown comparator in the UI]" mean the an UI of the manifesto comparator was shown to the user
 
@@ -630,17 +631,68 @@ async function submitUserMessage(content: string) {
       return textNode;
     },
     tools: {
+      showElectionInstructions: {
+        description: "Show user the election instruction ui",
+        parameters: z.object({}),
+        generate: async function* ({ }) {
+
+          const toolCallId = nanoid();
+
+          aiState.done({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: "assistant",
+                content: [
+                  {
+                    type: "tool-call",
+                    toolName: "showElectionInstructions",
+                    toolCallId,
+                    args: {},
+                  },
+                ],
+              },
+              {
+                id: nanoid(),
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolName: "showElectionInstructions",
+                    toolCallId,
+                    result: `User was shown instructions on how to take part in the election. 
+                    The steps shown are,
+                    1. Go to the polling booth and wait in queue
+                    2. Take your ballet paper and go the voting window
+                    3. Mark your vote secretly
+                    4. Put you ballet paper into the voting box
+                    `,
+                  },
+                ],
+              },
+            ],
+          });
+
+          return (
+            <BotCard>
+              <PollCard />
+            </BotCard>
+          );
+        },
+      },
       showPoll: {
         description: "Show user the poll ui for upcoming election",
         parameters: z.object({}),
         generate: async function* ({ }) {
-          yield (
-            <BotCard>
-              <LaodingSkeleton loadingTitles={['Starting Poll...']} />
-            </BotCard>
-          );
+          // yield (
+          //   <BotCard>
+          //     <LaodingSkeleton loadingTitles={['Starting Poll...']} />
+          //   </BotCard>
+          // );
 
-          await sleep(1000);
+          // await sleep(1000);
 
           const toolCallId = nanoid();
 
@@ -694,8 +746,6 @@ async function submitUserMessage(content: string) {
               />
             </BotCard>
           );
-
-          await sleep(1000);
 
           const toolCallId = nanoid();
 
