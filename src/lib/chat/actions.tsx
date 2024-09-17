@@ -646,6 +646,7 @@ async function submitUserMessage(content: string) {
 
           aiState.done({
             ...aiState.get(),
+            suggestions: ['What are the education qualifications of Ranil'],
             messages: [
               ...aiState.get().messages,
               {
@@ -817,6 +818,9 @@ async function submitUserMessage(content: string) {
 
           aiState.done({
             ...aiState.get(),
+            suggestions: ["What is the agricultural vision by Sajith",
+              "What are the steps should I follow to vote?",
+            ],
             messages: [
               ...aiState.get().messages,
               {
@@ -939,7 +943,7 @@ async function submitUserMessage(content: string) {
 
           aiState.done({
             ...aiState.get(),
-            suggestions: [""],
+            suggestions: ["What are the steps should I follow to vote?", "I want to take part in the poll"],
             messages: [
               ...aiState.get().messages,
               {
@@ -997,6 +1001,7 @@ async function submitUserMessage(content: string) {
           if (data.length === 0) {
             aiState.done({
               ...aiState.get(),
+              suggestions: ['What is the current situation of the election', 'What are the anti corruption measures by Anura and Saith'],
               messages: [
                 ...aiState.get().messages,
                 {
@@ -1107,7 +1112,7 @@ async function voteForCandidate(candiateName: string) {
       }
     ],
     suggestions: ["Break down the results of the poll",
-      "Who is leading in the poll?",
+      "What are the steps should I follow to vote?",
     ],
   })
 }
