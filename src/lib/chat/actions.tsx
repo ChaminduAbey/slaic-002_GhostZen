@@ -22,7 +22,6 @@ import {
 } from "@/components/stocks";
 
 import { z } from "zod";
-import { EventsSkeleton } from "@/components/stocks/events-skeleton";
 import { Events } from "@/components/stocks/events";
 import { StocksSkeleton } from "@/components/stocks/stocks-skeleton";
 import { Stocks } from "@/components/stocks/stocks";
