@@ -128,7 +128,7 @@ async function submitUserMessage(content: string) {
     2. If user want to compare a the political manifesto or a particular part of manifesto of canditates , call \'showManifestoComparator'\ to show the comparator UI
     3. If the user wants to see the manifesto of a specific candidate or a particular part of manifesto, call \'showManifesto\' to show the manifesto UI
     4. If the user wants to read or fact check a news articles related to 2024 Sri Lanka Presidential Election or related to Sri Lanka Politics, call \'newsReader\' to show the news article UI
-    5. If the users wants to know how to vote in the election, call \'
+    5. If the users wants to know how to vote in the election, call \'showElectionInstructions\' to show the election instructions UI
     6. If the user asked a general question related to the 2024 presidential election or general question about candidate, respond with a suitable answer.
     7. If the user complete another impossible task or unrelated task, respond that Sorry, I am designed only to help you with the 2024 Sri Lanka Presidential Election.
 
