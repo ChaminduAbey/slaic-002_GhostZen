@@ -98,3 +98,39 @@
         --chart-5: 340 75% 55%;
     }
 }
+
+
+
+
+.thinking-container {
+    width: 200px;  /* Adjust the width based on your design */
+    height: 40px;  /* Adjust height based on text size */
+    display: flex;
+    justify-content: start;
+    align-items: start;
+    position: relative;
+    overflow: hidden;
+}
+
+.thinking-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #4d4949;
+    position: absolute;
+    animation: moveAndFade 8s linear infinite;
+}
+
+@keyframes moveAndFade {
+    0% {
+        transform: translateY(-50%);
+        opacity: 0;
+    }
+    50% {
+        transform: translateY(0%);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(50%);
+        opacity: 0;
+    }
+}
