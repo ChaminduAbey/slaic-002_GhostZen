@@ -36,29 +36,30 @@ export function ChatPanel({
 
   const exampleMessages = [
     {
+      heading: 'Compared to the',
+      subheading: 'Theravada economy by Ranil, what are the measures will be taken for the economy by Anura?',
+      message: `Compared to Theravada economy by Ranil, what are the measures will be taken for the economy by Anura?`
+    },
+    {
       heading: 'What are the',
-      subheading: 'trending memecoins today?',
-      message: `What are the trending memecoins today?`
+      subheading: 'economic and education vision of Anura Kumara?',
+      message: 'economic and education vision of Anura Kumara?'
     },
     {
-      heading: 'What is the price of',
-      subheading: '$DOGE right now?',
-      message: 'What is the price of $DOGE right now?'
+      heading: 'When will the ',
+      subheading: ' presidential election happen?',
+      message: 'When will the  presidential election happen?'
     },
+
     {
-      heading: 'I would like to buy',
-      subheading: '42 $DOGE',
-      message: `I would like to buy 42 $DOGE`
-    },
-    {
-      heading: 'What are some',
-      subheading: `recent events about $DOGE?`,
-      message: `What are some recent events about $DOGE?`
+      heading: 'What are the',
+      subheading: ` steps should i follow to vote?`,
+      message: `What are the  steps should i follow to vote?`
     }
   ]
 
   return (
-    <div className="fixed inset-x-0 bottom-0 w-full bg-gradient-to-b from-muted/30 from-0% to-muted/30 to-50% duration-300 ease-in-out animate-in dark:from-background/10 dark:from-10% dark:to-background/80 peer-[[data-state=open]]:group-[]:lg:pl-[250px] peer-[[data-state=open]]:group-[]:xl:pl-[300px]">
+    <div className="fixed inset-x-0 bottom-0 w-full bg-background from-muted/30 from-0% to-muted/30 to-50% duration-300 ease-in-out animate-in dark:from-background/10 dark:from-10% dark:to-background/80 peer-[[data-state=open]]:group-[]:lg:pl-[250px] peer-[[data-state=open]]:group-[]:xl:pl-[300px]">
       <ButtonScrollToBottom
         isAtBottom={isAtBottom}
         scrollToBottom={scrollToBottom}

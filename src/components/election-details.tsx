@@ -11,7 +11,7 @@ export function ElectionDetailsView() {
     }, {
         title: "Step 2",
         image: "/graphics/election-step2.png",
-        subTitle: "Take your ballet paper and go the voting window."
+        subTitle: "Take your ballet and go the voting window."
     }, {
         title: "Step 3",
         image: "/graphics/election-step3.png",
@@ -48,13 +48,13 @@ function ElectionCard({ index, title, subTitle, image }: { index: number, title:
         }}
 
 
-        className="">
+        className="  justify-self-start">
         <motion.div
             whileHover={{
                 scale: 1.05
             }}
         >
-            <Card className="max-w-[350px] w-full p-4 rounded-[16px]">
+            <Card className=" w-full p-4 rounded-[16px]">
                 <CardContent className="flex flex-col space-y-3">
                     <h1 className="font-medium">
                         {title}

@@ -47,6 +47,8 @@ import LaodingSkeleton from "@/components/ui/loading-skeleton";
 
 import { zodResponseFormat } from "openai/helpers/zod";
 import NewsCard from "@/components/ui/news-card";
+import { ElectionDetailsView } from "@/components/election-details";
+import { resolve } from "path";
 
 
 async function confirmPurchase(symbol: string, price: number, amount: number) {
@@ -677,7 +679,7 @@ async function submitUserMessage(content: string) {
 
           return (
             <BotCard>
-              <PollCard />
+              <ElectionDetailsView />
             </BotCard>
           );
         },
@@ -776,6 +778,15 @@ async function submitUserMessage(content: string) {
               console.log((messages.data[0]?.content[0] as any).text.value);
               return (messages.data[0]?.content[0] as any).text.value;
             } else {
+
+              // wait 1 second
+              await new Promise((resolve) => {
+                setTimeout(() => {
+                  resolve("");
+                }, 1000)
+              })
+
+              return await checkStatusAndPrintMessages(threadId, runId)
               console.log("Run is not completed yet.");
             }
           };
@@ -786,15 +797,13 @@ async function submitUserMessage(content: string) {
             delay: number,
           ): Promise<string> {
             return new Promise((resolve) => {
-              setTimeout(() => {
-                const response = checkStatusAndPrintMessages(threadId, runId);
-                resolve(response);
-              }, delay);
+              const response = checkStatusAndPrintMessages(threadId, runId);
+              resolve(response);
             });
           }
 
           async function handleResponse(threadId: string, runId: string) {
-            const response = await waitForResponse(threadId, runId, 30000);
+            const response = await waitForResponse(threadId, runId, 300);
             const data = parseComparatorContent(response);
             return data;
           }
@@ -857,7 +866,7 @@ async function submitUserMessage(content: string) {
             </BotCard>
           );
 
-          await sleep(1000);
+          // await sleep(1000);
 
           const toolCallId = nanoid();
 
@@ -888,6 +897,16 @@ async function submitUserMessage(content: string) {
               console.log((messages.data[0]?.content[0] as any).text.value);
               return (messages.data[0]?.content[0] as any).text.value;
             } else {
+              // wait for 1 second 
+              // wait 1 second
+              await new Promise((resolve) => {
+                setTimeout(() => {
+                  resolve("");
+                }, 300)
+              })
+
+              return await checkStatusAndPrintMessages(threadId, runId)
+
               console.log("Run is not completed yet.");
             }
           };
@@ -897,11 +916,11 @@ async function submitUserMessage(content: string) {
             runId: string,
             delay: number,
           ): Promise<string> {
-            return new Promise((resolve) => {
-              setTimeout(() => {
-                const response = checkStatusAndPrintMessages(threadId, runId);
-                resolve(response);
-              }, delay);
+            return new Promise(async (resolve) => {
+
+              const response = await checkStatusAndPrintMessages(threadId, runId);
+              resolve(response);
+
             });
           }
 
@@ -916,6 +935,7 @@ async function submitUserMessage(content: string) {
 
           aiState.done({
             ...aiState.get(),
+            suggestions: [""],
             messages: [
               ...aiState.get().messages,
               {
@@ -970,6 +990,47 @@ async function submitUserMessage(content: string) {
 
           const data = await getNews(aiState.get().messages.at(-1)?.content.toString()!);
 
+          if (data.length === 0) {
+            aiState.done({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: nanoid(),
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "tool-call",
+                      toolName: "newsReader",
+                      toolCallId,
+                      args: {},
+                    },
+                  ],
+                },
+                {
+                  id: nanoid(),
+                  role: "tool",
+                  content: [
+                    {
+                      type: "tool-result",
+                      toolName: "newsReader",
+                      toolCallId,
+                      result:
+                        "No relevant news articles found",
+                    },
+                  ],
+                },
+              ],
+            });
+            return (
+              <BotCard>
+                <div className="flex">
+                  No articles were found
+                </div>
+              </BotCard>
+            );
+          }
+
           aiState.done({
             ...aiState.get(),
             messages: [
@@ -995,7 +1056,7 @@ async function submitUserMessage(content: string) {
                     toolName: "newsReader",
                     toolCallId,
                     result:
-                      "User was shown a news article",
+                      "User was shown news articles",
                   },
                 ],
               },
@@ -1038,7 +1099,7 @@ async function voteForCandidate(candiateName: string) {
       {
         id: nanoid(),
         role: 'system',
-        content: `[User has voted ${candiateName}. User is now shown the results for poll. The results are for Anura - 186, Ranil - 305, Sajith - 237]`
+        content: `[User has voted ${candiateName}. User is now shown the results for poll. The results are for Anura - 207, Ranil - 305, Sajith - 60]`
       }
     ],
     suggestions: ["Break down the results of the poll",

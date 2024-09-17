@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/chart"
 
 const chartData = [
-    { name: "anura", votes: 186, image: "/graphics/poll-card-anura.png", fill: "var(--color-anura)" },
+    { name: "anura", votes: 207, image: "/graphics/poll-card-anura.png", fill: "var(--color-anura)" },
     { name: "ranil", votes: 305, image: "/graphics/poll-card-ranil.png", fill: "var(--color-ranil)" },
-    { name: "sajith", votes: 237, image: "/graphics/poll-card-sajith.png", fill: "var(--color-sajith)" },
+    { name: "sajith", votes: 60, image: "/graphics/poll-card-sajith.png", fill: "var(--color-sajith)" },
 ]
 const chartConfig = {
     votes: {

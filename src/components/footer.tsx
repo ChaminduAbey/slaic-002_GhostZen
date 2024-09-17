@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { ExternalLink } from '@/components/external-link'
 
 export function FooterText({ className, ...props }: React.ComponentProps<'p'>) {
-  return null;
+
   return (
     <p
       className={cn(
@@ -13,11 +13,11 @@ export function FooterText({ className, ...props }: React.ComponentProps<'p'>) {
       )}
       {...props}
     >
-      Open source AI chatbot built with{' '}
-      <ExternalLink href="https://nextjs.org">Next.js</ExternalLink> and{' '}
+      Developed by Ghost Zen
+      {/* <ExternalLink href="https://nextjs.org">Next.js</ExternalLink> and{' '}
       <ExternalLink href="https://github.com/vercel/ai">
         Vercel AI SDK
-      </ExternalLink>
+      </ExternalLink> */}
       .
     </p>
   )
