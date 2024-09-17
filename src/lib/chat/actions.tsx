@@ -17,15 +17,10 @@ import {
   BotCard,
   BotMessage,
   SystemMessage,
-  Stock,
-  Purchase,
 } from "@/components/stocks";
 
 import { z } from "zod";
-import { Events } from "@/components/stocks/events";
-import { StocksSkeleton } from "@/components/stocks/stocks-skeleton";
-import { Stocks } from "@/components/stocks/stocks";
-import { StockSkeleton } from "@/components/stocks/stock-skeleton";
+
 import {
   formatNumber,
   runAsyncFnWithoutBlocking,
@@ -44,10 +39,8 @@ import { useEffect } from "react";
 import { threadId } from "worker_threads";
 import LaodingSkeleton from "@/components/ui/loading-skeleton";
 
-import { zodResponseFormat } from "openai/helpers/zod";
 import NewsCard from "@/components/ui/news-card";
 import { ElectionDetailsView } from "@/components/election-details";
-import { resolve } from "path";
 
 
 
@@ -757,32 +750,7 @@ export const getUIStateFromAIState = (aiState: Chat) => {
     .map((message, index) => ({
       id: `${aiState.chatId}-${index}`,
       display:
-        message.role === "tool" ? (
-          message.content.map((tool) => {
-            return tool.toolName === "listStocks" ? (
-              <BotCard>
-                {/* TODO: Infer types based on the tool result*/}
-                {/* @ts-expect-error */}
-                <Stocks props={tool.result} />
-              </BotCard>
-            ) : tool.toolName === "showStockPrice" ? (
-              <BotCard>
-                {/* @ts-expect-error */}
-                <Stock props={tool.result} />
-              </BotCard>
-            ) : tool.toolName === "showStockPurchase" ? (
-              <BotCard>
-                {/* @ts-expect-error */}
-                <Purchase props={tool.result} />
-              </BotCard>
-            ) : tool.toolName === "getEvents" ? (
-              <BotCard>
-                {/* @ts-expect-error */}
-                <Events props={tool.result} />
-              </BotCard>
-            ) : null;
-          })
-        ) : message.role === "user" ? (
+       message.role === "user" ? (
           <UserMessage>{message.content as string}</UserMessage>
         ) : message.role === "assistant" &&
           typeof message.content === "string" ? (
