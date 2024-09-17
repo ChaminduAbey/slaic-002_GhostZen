@@ -33,6 +33,7 @@ import {
   sleep,
   nanoid,
   parseComparatorContent,
+  getNews,
 } from "@/lib/utils";
 import { saveChat } from "@/app/actions";
 import { SpinnerMessage, UserMessage } from "@/components/stocks/message";
@@ -43,6 +44,10 @@ import { ManifestoComparator } from "@/components/manifesto-comparator";
 import { useEffect } from "react";
 import { threadId } from "worker_threads";
 import LaodingSkeleton from "@/components/ui/loading-skeleton";
+
+import { zodResponseFormat } from "openai/helpers/zod";
+import NewsCard from "@/components/ui/news-card";
+
 
 async function confirmPurchase(symbol: string, price: number, amount: number) {
   "use server";
@@ -526,6 +531,7 @@ async function submitUserMessage(content: string) {
     If the user requests to vote in the poll, call \`showPoll\` to show the poll UI.
     If user want to compare a the political manifesto of canditates, call \'showManifestoComparator'\ to show the comparator UI
     If the user wants to see the manifesto of a candidate, call \'showManifesto\' to show the manifesto UI
+    If the user wants to read or fact check a news article, call \'newsReader\' to show the news article
     If the user complete another impossible task or unrelated task, respond that you are a demo and cannot do that.
 
     
@@ -807,7 +813,7 @@ async function submitUserMessage(content: string) {
                 content: [
                   {
                     type: "tool-call",
-                    toolName: "showManifestoComparator",
+                    toolName: "showManifesto",
                     toolCallId,
                     args: {},
                   },
@@ -819,7 +825,7 @@ async function submitUserMessage(content: string) {
                 content: [
                   {
                     type: "tool-result",
-                    toolName: "showManifestoComparator",
+                    toolName: "showManifesto",
                     toolCallId,
                     result:
                       "User was shown a manifesto",
@@ -836,9 +842,67 @@ async function submitUserMessage(content: string) {
           );
         },
       },
+    newsReader: {
+        description:
+          "Show users the trusted news article related to the query",
+        parameters: z.object({}),
+        generate: async function* ({}) {
+          yield (
+            <BotCard>
+              <LaodingSkeleton
+                loadingTitles={['Searching for News', 'Filtering News']}
+              />
+            </BotCard>
+          );
 
+          const toolCallId = nanoid();
 
+          const data = await getNews(aiState.get().messages.at(-1)?.content.toString()!);
+
+          aiState.done({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: "assistant",
+                content: [
+                  {
+                    type: "tool-call",
+                    toolName: "newsReader",
+                    toolCallId,
+                    args: {},
+                  },
+                ],
+              },
+              {
+                id: nanoid(),
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolName: "newsReader",
+                    toolCallId,
+                    result:
+                      "User was shown a news article",
+                  },
+                ],
+              },
+            ],
+          });
+
+          console.log(data);
+
+          return (
+            <BotCard>
+              <NewsCard data={data} />
+            </BotCard>
+          );
+        },
+      },
     },
+
+
   });
 
   return {

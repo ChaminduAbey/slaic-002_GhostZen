@@ -44,3 +44,23 @@ export interface ComparatorContent{
   candidate: string,
   content: string
 }
+
+export interface NewsItem {
+  title: string;
+  link: string;
+  snippet: string;
+  image: string;
+}
+
+export interface CustomSearchResponse {
+  items?: Array<{
+    title: string;
+    link: string;
+    snippet: string;
+    pagemap?: {
+      cse_image?: Array<{
+        src: string;
+      }>;
+    };
+  }>;
+}

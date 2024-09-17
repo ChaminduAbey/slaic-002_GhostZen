@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { customAlphabet } from 'nanoid'
 import { twMerge } from 'tailwind-merge'
-import { ComparatorContent } from './types'
+import { ComparatorContent, CustomSearchResponse, NewsItem } from './types'
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
@@ -149,4 +149,39 @@ export function parseComparatorContent(input: string): ComparatorContent[] {
   }
 
 
+
+
+  export async function getNews(query: string): Promise<NewsItem[]> {
+    const apiKey = process.env.GOOGLE_NEWS_API;
+    const customSearchId = process.env.CUSTOM_NEWS_SEARCH_ID;
   
+    const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${customSearchId}&q=${query}&sort=date&cr=countryLK`;
+  
+    try {
+      const response = await fetch(url);
+      const data: CustomSearchResponse = await response.json();
+  
+      if (data.items && data.items.length > 0) {
+        const topItems = data.items.slice(0, 3);
+  
+        const newsItems: NewsItem[] = topItems.map(item => {
+          const imageUrl = item.pagemap?.cse_image?.[0]?.src || "No image available";
+  
+          return {
+            title: item.title,
+            link: item.link,
+            snippet: item.snippet,
+            image: imageUrl
+          };
+        });
+        
+        return newsItems;
+      } else {
+        console.error("No results found.");
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching news:", error);
+      return [];
+    }
+  }
