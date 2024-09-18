@@ -124,15 +124,16 @@ async function submitUserMessage(content: string) {
 
     Steps:
 
-    1. If the user requests to vote in the poll or to see the winning prediction of the election, call \`showPoll\` to show the poll UI.
+    1. If the user requests to vote in the poll call \`showPoll\` to show the poll UI.
     2. If user want to compare a the political manifesto or a particular part of manifesto of canditates , call \'showManifestoComparator'\ to show the comparator UI
-    3. If the user wants to see the manifesto of a specific candidate or a particular part of manifesto, call \'showManifesto\' to show the manifesto UI
+    3. If the user wants to see the manifesto of a specific candidate or a specific question about manifesto of a candidate call \'showManifesto\' to show the manifesto UI
     4. If the user wants to read or fact check a news articles related to 2024 Sri Lanka Presidential Election or related to Sri Lanka Politics, call \'newsReader\' to show the news article UI
     5. If the users wants to know how to vote in the election, call \'showElectionInstructions\' to show the election instructions UI
-    6. If the user asked a general question related to the 2024 presidential election or general question about candidate, respond with a suitable answer.
-    7. If the user complete another impossible task or unrelated task, respond that Sorry, I am designed only to help you with the 2024 Sri Lanka Presidential Election.
+    6. If the user wants to know the winning prediction of the 2024 Sri Lanka Presidential Election, call \'winPredictor\' to show the winning prediction UI
+    7. If the user asked a general question related to the 2024 presidential election (not related to manifesto) or general question about candidate, respond with a suitable answer.
+    8. If the user complete another impossible task or unrelated task, respond that Sorry, I am designed only to help you with the 2024 Sri Lanka Presidential Election.
 
-    8. Messages inside [] means that it's a UI element or a user event. For example:
+    9. Messages inside [] means that it's a UI element or a user event. For example:
     - "[User was shown poll]" means that an UI of the poll was shown to user.
     - "[User was shown comparator in the UI]" mean the an UI of the manifesto comparator was shown to the user
 
@@ -251,6 +252,7 @@ async function submitUserMessage(content: string) {
 
           aiState.done({
             ...aiState.get(),
+            suggestions:["Who will win the 2024 presidential election of Sri Lanka?", "Break down the results of the poll"],
             messages: [
               ...aiState.get().messages,
               {
@@ -364,7 +366,7 @@ async function submitUserMessage(content: string) {
 
           aiState.done({
             ...aiState.get(),
-            suggestions: ["What is the agricultural vision by Sajith",
+            suggestions: ["What is the agriculture vision by Sajith",
               "What are the steps should I follow to vote?",
             ],
             messages: [
@@ -623,6 +625,170 @@ async function submitUserMessage(content: string) {
           return (
             <BotCard>
               <NewsCard data={data} />
+            </BotCard>
+          );
+        },
+      },
+
+
+
+      winPredictor: {
+        description:
+          "Show users the winning prediction of the 2024 sri lankas presidential election",
+        parameters: z.object({}),
+        generate: async function* ({ }) {
+          yield (
+            <BotCard>
+              <LaodingSkeleton
+                loadingTitles={['Searching for News', 'Analyzing Data', 'Predicting Results', 'Finalizing Results']}
+              />
+            </BotCard>
+          );
+
+          const toolCallId = nanoid();
+
+          const data = await getNews("news IHP prediction about 2024 presidential election september");
+            let extractedText = "";
+            try {
+            const response = await fetch(data[0]!.link);
+            const html = await response.text();
+            const paragraphRegex = /<p[^>]*>(.*?)<\/p>/g;
+            let matches;
+
+            while ((matches = paragraphRegex.exec(html)) !== null) {
+              let content = matches[1];
+              content = content!.replace(/<\/?[^>]+(>|$)/g, "");
+              content = content!.replace(/\s+/g, ' ').trim();
+              extractedText += content + " ";
+            }
+            } catch (error) {
+            console.error("Error fetching or parsing the HTML:", error);
+            extractedText = "";
+            }
+
+
+          if (extractedText.trim().length === 0) {
+            aiState.done({
+              ...aiState.get(),
+              suggestions: ['Is Anura have a plan about cultural development?', 'What are the steps should I follow to vote?'],
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: nanoid(),
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "tool-call",
+                      toolName: "winPredictor",
+                      toolCallId,
+                      args: {},
+                    },
+                  ],
+                },
+                {
+                  id: nanoid(),
+                  role: "tool",
+                  content: [
+                    {
+                      type: "tool-result",
+                      toolName: "winPredictor",
+                      toolCallId,
+                      result:
+                        "No valid prediction found",
+                    },
+                  ],
+                },
+              ],
+            });
+            return (
+              <BotCard>
+                <div className="flex">
+                  No valid prediction found!
+                </div>
+              </BotCard>
+            );
+          }
+
+          
+          const openai = new OpenAI();
+          const completion = await openai.chat.completions.create({
+            messages: [{"role": "system", "content": `
+                    Role:
+                    You are a election related win predictor chat bot.
+
+                    Instructions:
+                    You and the user can dicuss regarding the 2024 Sri Lanka Presidential Election winning prediction based on the news article from Institute For Health Policy LK (ihp.lk).
+                    Here are political parties, their short name and candidate name.
+                    1. Puluwan Sri Lanka (Also you can consider this as UNP) - Ranil Wickramasinghe
+                    2. National People's Power (UNP/JVP) - Anura Kumara
+                    3. Samagi Jana Sandanaya (SJB or SJS) - Sajith Premadasa
+                    4. Sri Lanka Podujana Peramuna (SLPP) - Namal Rajapaksa
+                    and other parties and candidates.
+
+                    Steps:
+                    1. Read the news article provided by the user
+                    2. analyze the data and predict the winning party and candidate based on the news article one by one.
+                    3. Provide summarized and well organized winning prediction to the user based on the news article and user query.
+                    4. at the end provide disclaimer that the prediction is based on the news article from ihp.lk and it may not be accurate.
+
+                    End Goal:
+                    Help users to get a better understanding of the winning prediction of the 2024 Sri Lanka Presidential Election based on the news article from IHP.
+
+                    Narrow:
+                    1. You are not allowed to talk about anything other than the 2024 Sri Lanka Presidential Election.
+                    2. You cannot provide false information.
+                    3. You cannot provide any prediction without analyzing the news article.
+              `},
+                {"role": "user", "content": `
+                  
+                  User Query: ${aiState.get().messages.at(-1)?.content.toString()!}
+                  Article: ${extractedText.trim()}
+                  `},
+            ],
+            model: "gpt-4o",
+            temperature: 0.2,
+          });
+        
+          console.log(completion.choices[0]);
+        
+         
+          aiState.done({
+            ...aiState.get(),
+            suggestions: ['Is Anura have a plan about cultural development?', 'What are the steps should I follow to vote?'],
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: "assistant",
+                content: [
+                  {
+                    type: "tool-call",
+                    toolName: "winPredictor",
+                    toolCallId,
+                    args: {},
+                  },
+                ],
+              },
+              {
+                id: nanoid(),
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolName: "winPredictor",
+                    toolCallId,
+                    result:completion.choices[0]?.message.content!
+                      ,
+                  },
+                ],
+              },
+            ],
+          });
+
+
+          return (
+            <BotCard>
+              <BotMessage content={completion.choices[0]?.message.content!} />
             </BotCard>
           );
         },
