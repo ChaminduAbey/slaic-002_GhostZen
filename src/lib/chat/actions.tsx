@@ -252,7 +252,7 @@ async function submitUserMessage(content: string) {
 
           aiState.done({
             ...aiState.get(),
-            suggestions:["Who will win the 2024 presidential election of Sri Lanka?", "Break down the results of the poll"],
+            suggestions: ["Who will win the 2024 presidential election of Sri Lanka?", "Break down the results of the poll"],
             messages: [
               ...aiState.get().messages,
               {
@@ -314,7 +314,7 @@ async function submitUserMessage(content: string) {
 
           const run = await openai.beta.threads.runs.create(thread.id, {
             // assistant_id: "asst_48uDzWrOVKweM0rjthgdfygv",
-            assistant_id: "asst_1Ff1uvH8D5pS9nDyC7WlULKN", //Politikk Test
+            assistant_id: "asst_1Ff1uvH8D5pS9nDyC7WlULKN", //Test
           });
 
           const checkStatusAndPrintMessages = async (
@@ -436,7 +436,7 @@ async function submitUserMessage(content: string) {
 
           const run = await openai.beta.threads.runs.create(thread.id, {
             // assistant_id: "asst_48uDzWrOVKweM0rjthgdfygv",
-            assistant_id: "asst_1Ff1uvH8D5pS9nDyC7WlULKN", //Politikk Test
+            assistant_id: "asst_1Ff1uvH8D5pS9nDyC7WlULKN", //Test
           });
 
           const checkStatusAndPrintMessages = async (
@@ -648,8 +648,8 @@ async function submitUserMessage(content: string) {
           const toolCallId = nanoid();
 
           const data = await getNews("news IHP prediction about 2024 presidential election september");
-            let extractedText = "";
-            try {
+          let extractedText = "";
+          try {
             const response = await fetch(data[0]!.link);
             const html = await response.text();
             const paragraphRegex = /<p[^>]*>(.*?)<\/p>/g;
@@ -661,10 +661,10 @@ async function submitUserMessage(content: string) {
               content = content!.replace(/\s+/g, ' ').trim();
               extractedText += content + " ";
             }
-            } catch (error) {
+          } catch (error) {
             console.error("Error fetching or parsing the HTML:", error);
             extractedText = "";
-            }
+          }
 
 
           if (extractedText.trim().length === 0) {
@@ -709,10 +709,11 @@ async function submitUserMessage(content: string) {
             );
           }
 
-          
+
           const openai = new OpenAI();
           const completion = await openai.chat.completions.create({
-            messages: [{"role": "system", "content": `
+            messages: [{
+              "role": "system", "content": `
                     Role:
                     You are a election related win predictor chat bot.
 
@@ -739,7 +740,8 @@ async function submitUserMessage(content: string) {
                     2. You cannot provide false information.
                     3. You cannot provide any prediction without analyzing the news article.
               `},
-                {"role": "user", "content": `
+            {
+              "role": "user", "content": `
                   
                   User Query: ${aiState.get().messages.at(-1)?.content.toString()!}
                   Article: ${extractedText.trim()}
@@ -748,10 +750,10 @@ async function submitUserMessage(content: string) {
             model: "gpt-4o",
             temperature: 0.2,
           });
-        
+
           console.log(completion.choices[0]);
-        
-         
+
+
           aiState.done({
             ...aiState.get(),
             suggestions: ['Is Anura have a plan about cultural development?', 'What are the steps should I follow to vote?'],
@@ -777,8 +779,8 @@ async function submitUserMessage(content: string) {
                     type: "tool-result",
                     toolName: "winPredictor",
                     toolCallId,
-                    result:completion.choices[0]?.message.content!
-                      ,
+                    result: completion.choices[0]?.message.content!
+                    ,
                   },
                 ],
               },
@@ -916,7 +918,7 @@ export const getUIStateFromAIState = (aiState: Chat) => {
     .map((message, index) => ({
       id: `${aiState.chatId}-${index}`,
       display:
-       message.role === "user" ? (
+        message.role === "user" ? (
           <UserMessage>{message.content as string}</UserMessage>
         ) : message.role === "assistant" &&
           typeof message.content === "string" ? (
