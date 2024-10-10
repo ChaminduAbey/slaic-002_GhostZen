@@ -41,10 +41,10 @@ import LaodingSkeleton from "@/components/ui/loading-skeleton";
 
 import NewsCard from "@/components/ui/news-card";
 import { ElectionDetailsView } from "@/components/election-details";
+import { ElectionResultCard } from "@/components/election-result/election-result";
+import { api } from "@/trpc/server";
 
-
-
-async function submitUserMessage(content: string) {
+async function submitUserMessage(content: string, role: "user" | "system" = "user") {
   "use server";
 
   const aiState = getMutableAIState<typeof AI>();
@@ -55,7 +55,7 @@ async function submitUserMessage(content: string) {
       ...aiState.get().messages,
       {
         id: nanoid(),
-        role: "user",
+        role: role ?? "user",
         content,
       },
     ],
@@ -132,8 +132,10 @@ async function submitUserMessage(content: string) {
     6. If the user wants to know the winning prediction of the 2024 Sri Lanka Presidential Election, call \'winPredictor\' to show the winning prediction UI
     7. If the user asked a general question related to the 2024 presidential election (not related to manifesto) or general question about candidate, respond with a suitable answer.
     8. If the user complete another impossible task or unrelated task, respond that Sorry, I am designed only to help you with the 2024 Sri Lanka Presidential Election.
-
-    9. Messages inside [] means that it's a UI element or a user event. For example:
+    9. If the user asks for election result by either giving a location or the specific id for election result call \'showElectionResult\' to show the election result UI
+    10. If the the user want to see the overall result of the electio call \'overAllElectionResult\' to show the overall election result UI
+    
+    11. Messages inside [] means that it's a UI element or a user event. For example:
     - "[User was shown poll]" means that an UI of the poll was shown to user.
     - "[User was shown comparator in the UI]" mean the an UI of the manifesto comparator was shown to the user
 
@@ -795,8 +797,234 @@ async function submitUserMessage(content: string) {
           );
         },
       },
-    },
 
+      showElectionResult: {
+        description:
+          "Shows the user election result either by the resultId or location name",
+        parameters: z.object({
+          resultId: z.string().optional(),
+          location: z.enum(["Galle", "Colombo"]).optional(),
+        }),
+        generate: async function* ({ resultId, location }) {
+          yield (
+            <BotCard>
+              <LaodingSkeleton
+                loadingTitles={['Getting Your Results']}
+              />
+            </BotCard>
+          );
+
+          const toolCallId = nanoid();
+
+          const results = await api.electionResult.getResults();
+
+          var result: undefined | { anura: number, ranil: number, sajith: number, location: string, id: string };
+          if (resultId) {
+            result = results.find((r) => r.id === resultId);
+          } else if (location) {
+            result = results.find((r) => r.location === location);
+          }
+
+          console.log("Result of election", result)
+
+          if (!result) {
+            aiState.done({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: nanoid(),
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "tool-call",
+                      toolName: "showElectionResult",
+                      toolCallId,
+                      args: {},
+                    },
+                  ],
+                },
+                {
+                  id: nanoid(),
+                  role: "tool",
+                  content: [
+                    {
+                      type: "tool-result",
+                      toolName: "showElectionResult",
+                      toolCallId,
+                      result:
+                        "No election results found",
+                    },
+                  ],
+                },
+              ],
+            });
+
+            return <BotCard>
+              <div className="flex">
+                No election results found!
+              </div>
+            </BotCard>
+
+          }
+
+
+          aiState.done({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: "assistant",
+                content: [
+                  {
+                    type: "tool-call",
+                    toolName: "showElectionResult",
+                    toolCallId,
+                    args: {},
+                  },
+                ],
+              },
+              {
+                id: nanoid(),
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolName: "showElectionResult",
+                    toolCallId,
+                    result:
+                      `User was shown election result id ${result.id} for location ${result.location}. Result is Anura - ${result.anura}, Ranil - ${result.ranil}, Sajith - ${result.sajith}`,
+                  },
+                ],
+              },
+            ],
+          });
+
+
+
+          return (
+            <BotCard>
+              <ElectionResultCard result={result} />
+            </BotCard>
+          );
+        },
+      },
+
+      overAllElectionResult: {
+        description:
+          "Shows the user result of the election till now",
+        parameters: z.object({
+
+        }),
+        generate: async function* ({ }) {
+          yield (
+            <BotCard>
+              <LaodingSkeleton
+                loadingTitles={['Getting Your Results']}
+              />
+            </BotCard>
+          );
+
+          const toolCallId = nanoid();
+
+          const results = await api.electionResult.getResults();
+
+
+          if (results.length === 0) {
+            aiState.done({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: nanoid(),
+                  role: "assistant",
+                  content: [
+                    {
+                      type: "tool-call",
+                      toolName: "showElectionResult",
+                      toolCallId,
+                      args: {},
+                    },
+                  ],
+                },
+                {
+                  id: nanoid(),
+                  role: "tool",
+                  content: [
+                    {
+                      type: "tool-result",
+                      toolName: "showElectionResult",
+                      toolCallId,
+                      result:
+                        "No election results found",
+                    },
+                  ],
+                },
+              ],
+            });
+
+            return <BotCard>
+              <div className="flex">
+                No election results found!
+              </div>
+            </BotCard>
+
+          }
+
+          var result = {
+            anura: results.reduce((acc, r) => acc + r.anura, 0),
+            ranil: results.reduce((acc, r) => acc + r.ranil, 0),
+            sajith: results.reduce((acc, r) => acc + r.sajith, 0),
+            location: "Overall",
+          }
+
+
+
+
+          aiState.done({
+            ...aiState.get(),
+            suggestions: ["What are the steps should I follow to vote?",],
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: "assistant",
+                content: [
+                  {
+                    type: "tool-call",
+                    toolName: "overAllElectionResult",
+                    toolCallId,
+                    args: {},
+                  },
+                ],
+              },
+              {
+                id: nanoid(),
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolName: "overAllElectionResult",
+                    toolCallId,
+                    result:
+                      `User was shown overall election result Anura - ${result.anura}, Ranil - ${result.ranil}, Sajith - ${result.sajith}`,
+                  },
+                ],
+              },
+            ],
+          });
+
+
+
+          return (
+            <BotCard>
+              <ElectionResultCard result={result} />
+            </BotCard>
+          );
+        },
+      },
+    },
 
   });
 
