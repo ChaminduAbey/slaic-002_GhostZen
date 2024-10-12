@@ -43,11 +43,127 @@ import NewsCard from "@/components/ui/news-card";
 import { ElectionDetailsView } from "@/components/election-details";
 import { ElectionResultCard } from "@/components/election-result/election-result";
 import { api } from "@/trpc/server";
+import { generateObject, generateText } from "ai";
+import { TriggerRemainingSuggestion } from "@/components/prompt-form";
 
-async function submitUserMessage(content: string, role: "user" | "system" = "user") {
+// i want to take part in the poll and know when the election is being held
+//  i want to take part in the poll and know when the election is being held and after the please tell me about the theravada economic policies of ranil
+async function checkIfLastMessage(messageId: string) {
+  "use server";
+  const aiState = getMutableAIState<typeof AI>();
+
+  const messages = aiState.get().messages;
+
+  // console.log(messageId, messages);
+
+  return messages[messages.length - 1].id == messageId;
+}
+
+async function checkForRemainingSteps() {
+  "use server";
+  const aiState = getMutableAIState<typeof AI>();
+
+  return aiState.get().steps;
+}
+
+async function submitUserMessage(
+  content: string,
+  role: "user" | "system" = "user",
+) {
   "use server";
 
   const aiState = getMutableAIState<typeof AI>();
+
+  const dagResult = await generateObject({
+    schema: z.object({
+      steps: z
+        .array(z.string().describe("Step"))
+        .describe("The list of steps user has asked for"),
+    }),
+    model: openai("gpt-4o"),
+    system: `
+
+
+    Following is a prompt for llm chat. Your job is to seperate out the users request to individiual steps while maintaing the context required for each step
+    
+    You are a election related conversation chat bot.
+
+    Instructions:
+    You and the user can dicuss regarding the 2024 Sri Lanka Presidential Election.
+
+    There are 3 main candidates for 2024 Sri Lanka Presidential Election and their basic information.
+
+    1. Name: Ranil Wickramasinghe, Political Party: Puluwan Sri Lanka
+    Ranil Wickremesinghe, born on 24 March 1949 in Colombo, is the current and ninth President of Sri Lanka. Educated at Royal College, Colombo, and the University of Ceylon (now University of Colombo), he has led the United National Party (UNP) since 1994. Wickremesinghe has served as Prime Minister of Sri Lanka six times, making him a prominent figure in the country's political landscape. He has been named the presidential candidate for the Puluwan Sri Lanka party for the 2024 Sri Lankan presidential election.
+
+    2. Name: Anura Kumara, Political Party: National People's Power
+    Anura Kumara Dissanayake, born on 24 November 1968 in Thambuthegama, Sri Lanka, graduated from the University of Kelaniya in 1995 with a degree in physical science. He is the current leader of the Janatha Vimukthi Peramuna (JVP) since 2014 and of the National People's Power (NPP) since 2019. A Member of Parliament for the Colombo District, he was a presidential candidate in 2019 and has been named the NPP's candidate for the 2024 Sri Lankan presidential election.
+
+    3. Name: Sajith Premadasa, Political Party: Samagi Jana Sandanaya
+    Sajith Premadasa, born on 12 January 1967 in Colombo, entered politics after his father's assassination in 1993, joining the United National Party (UNP). Premadasa holds a degree in economics, politics, and international relations from the London School of Economics and the University of London. He has been named the presidential candidate for the Samagi Jana Sandanaya (SJS) for the 2024 Sri Lankan presidential election.
+    
+    -------------------------
+
+
+    Here is a breif idea about the candidates manifesto:
+    1. Ranil Wickranasinghe
+    Ranil Wickremesinghe's manifesto emphasizes reform in education, healthcare, economic development, and governance. His education policies prioritize vocational training, offering youth job placements and allowances. In healthcare, he focuses on improving access for marginalized communities, especially plantation workers, and advocates for digital health systems. His economic vision includes transforming Sri Lanka into an export-driven economy, with a focus on agriculture, tourism, and modernizing key sectors like fisheries and manufacturing. He also outlines plans for environmental sustainability, promoting renewable energy and protecting biodiversity. Governance reforms include anti-corruption measures, digitalization, and policies for social justice and reconciliation.
+
+    2. Anura Kumara
+    Anura Kumara Dissanayake's manifesto focuses on education reform, healthcare, economic development, environmental sustainability, and social justice. It advocates for early childhood education, expanding vocational education, and increasing investment in public universities. The healthcare plan emphasizes universal healthcare, digitizing patient records, and improving public health. His economic vision includes supporting local production, entrepreneurship, and sustainable agriculture. Environmental goals center on renewable energy, reforestation, and resource conservation. Social policies promote gender equality, social protection for vulnerable families, and anti-corruption reforms, with an emphasis on governance transparency and accountability.
+
+    3. Sajith Premadasa
+    Sajith Premadasa's manifesto highlights reforms in education, healthcare, economic development, and governance. It advocates for modernizing education through digital platforms and STEEAM curricula, expanding vocational training, and improving higher education standards. Healthcare reforms focus on universal healthcare with initiatives like "Husma" and "Suraksha," emphasizing preventive care. Economic policies prioritize supporting MSMEs, modernizing agriculture with smart technology, and promoting digital infrastructure. Environmental goals include transitioning to 70% renewable energy by 2030. Governance reforms emphasize anti-corruption, judicial efficiency, and digitalizing government services. Social policies focus on empowering women, promoting equality, and improving public services.
+    
+    -------------------------
+
+    The presidential electrion will be held on Saturday, 21st of September 2024.
+    Steps: 
+    1. If the user requests to vote in the poll call \`showPoll\` to show the poll UI.
+    2. If user want to compare a the political manifesto or a particular part of manifesto of canditates , call \'showManifestoComparator'\ to show the comparator UI
+    3. If the user wants to see the manifesto of a specific candidate or a specific question about manifesto of a candidate call \'showManifesto\' to show the manifesto UI
+    4. If the user wants to read or fact check a news articles related to 2024 Sri Lanka Presidential Election or related to Sri Lanka Politics, call \'newsReader\' to show the news article UI
+    5. If the users wants to know how to vote in the election, call \'showElectionInstructions\' to show the election instructions UI
+    6. If the user wants to know the winning prediction of the 2024 Sri Lanka Presidential Election, call \'winPredictor\' to show the winning prediction UI
+    7. If the user asked a general question related to the 2024 presidential election (not related to manifesto) or general question about candidate, respond with a suitable answer.
+    8. If the user complete another impossible task or unrelated task, respond that Sorry, I am designed only to help you with the 2024 Sri Lanka Presidential Election.
+    9. If the user asks for election result by either giving a location or the specific id for election result call \'showElectionResult\' to show the election result UI
+    10. If the the user want to see the overall result of the electio call \'overAllElectionResult\' to show the overall election result UI
+
+    Following is the previous the remaining steps, make sure to include them as well where necessary. Keep the old order as well.
+    ${(aiState.get().steps ?? []).reduce((previous, current, index) => {
+      return previous + `${index + 1}. ${current}\n`;
+    }, "")}
+    Steps are finished now. If it us undefined ignore the previous steps
+    
+    Make sure steps contain natural language and context so the llm that takes in your output can generate a correct response. Dont just include the tool. Reword the users request from the users point view 
+    `,
+    temperature: 0.2,
+    messages: [
+      ...aiState.get().messages.map((message: any) => ({
+        role: message.role,
+        content: message.content,
+        name: message.name,
+      })),
+      {
+        role: role ?? "user",
+        content,
+      },
+    ],
+  });
+
+  console.log(aiState.get().steps);
+  console.log(
+    `${(aiState.get().steps ?? []).reduce((previous, current, index) => {
+      return previous + `${index + 1}. ${current}\n`;
+    }, "")}`,
+  );
+  console.log("Steps", dagResult.object.steps);
+
+  const remainingSteps: string[] = [];
+  for (var i = 1; i < dagResult.object.steps.length; i++) {
+    remainingSteps.push(dagResult.object.steps[i]!);
+  }
 
   aiState.update({
     ...aiState.get(),
@@ -56,9 +172,10 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
       {
         id: nanoid(),
         role: role ?? "user",
-        content,
+        content: dagResult.object.steps[0]!,
       },
     ],
+    steps: [...remainingSteps],
   });
 
   let textStream: undefined | ReturnType<typeof createStreamableValue<string>>;
@@ -68,7 +185,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
     // model: openai("gpt-3.5-turbo"),
     // initial: <SpinnerMessage />,
     // system: `\
-    // You are a election related conversation bot. 
+    // You are a election related conversation bot.
     // You and the user can dicuss regarding the political parties election, take a poll for the party they will vote for, in the UI.
 
     // Messages inside [] means that it's a UI element or a user event. For example:
@@ -80,7 +197,6 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
     // If the user wants to see the manifesto of a candidate, call \'showManifesto\' to show the manifesto UI
     // If the user wants to read or fact check a news article, call \'newsReader\' to show the news article
     // If the user complete another impossible task or unrelated task, respond that you are a demo and cannot do that.
-
 
     // Besides that, you can also chat with users and explain to me them any things they are not clear.`,
 
@@ -158,21 +274,25 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
     text: ({ content, done, delta }) => {
       if (!textStream) {
         textStream = createStreamableValue("");
-        textNode = <BotMessage content={textStream.value} />;
+        textNode = (
+          <>
+            <BotMessage content={textStream.value} />
+          </>
+        );
       }
-
+      const messageId = nanoid();
       if (done) {
         textStream.done();
         aiState.done({
           ...aiState.get(),
           suggestions: [
             "Compared to Theravada economy by Ranil, what are the measures will be taken for the economy by Anura.",
-            "What are the economic and education vision of Anura Kumara?"
+            "What are the economic and education vision of Anura Kumara?",
           ],
           messages: [
             ...aiState.get().messages,
             {
-              id: nanoid(),
+              id: messageId,
               role: "assistant",
               content,
             },
@@ -182,6 +302,15 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
         textStream.update(delta);
       }
 
+      if (done) {
+        return (
+          <>
+            <TriggerRemainingSuggestion messageId={messageId} />
+            {textNode}
+          </>
+        );
+      }
+
       // console.log(aiState.get().messages);
       return textNode;
     },
@@ -189,13 +318,13 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
       showElectionInstructions: {
         description: "Show user the election instruction ui",
         parameters: z.object({}),
-        generate: async function* ({ }) {
-
+        generate: async function* ({}) {
           const toolCallId = nanoid();
+          const toolResultId = nanoid();
 
           aiState.done({
             ...aiState.get(),
-            suggestions: ['What are the education qualifications of Ranil'],
+            suggestions: ["What are the education qualifications of Ranil"],
             messages: [
               ...aiState.get().messages,
               {
@@ -211,7 +340,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                 ],
               },
               {
-                id: nanoid(),
+                id: toolResultId,
                 role: "tool",
                 content: [
                   {
@@ -234,6 +363,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
           return (
             <BotCard>
               <ElectionDetailsView />
+              <TriggerRemainingSuggestion messageId={toolResultId} />
             </BotCard>
           );
         },
@@ -241,7 +371,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
       showPoll: {
         description: "Show user the poll ui for upcoming election",
         parameters: z.object({}),
-        generate: async function* ({ }) {
+        generate: async function* ({}) {
           // yield (
           //   <BotCard>
           //     <LaodingSkeleton loadingTitles={['Starting Poll...']} />
@@ -251,10 +381,14 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
           // await sleep(1000);
 
           const toolCallId = nanoid();
+          const toolResultId = nanoid();
 
           aiState.done({
             ...aiState.get(),
-            suggestions: ["Who will win the 2024 presidential election of Sri Lanka?", "Break down the results of the poll"],
+            suggestions: [
+              "Who will win the 2024 presidential election of Sri Lanka?",
+              "Break down the results of the poll",
+            ],
             messages: [
               ...aiState.get().messages,
               {
@@ -270,7 +404,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                 ],
               },
               {
-                id: nanoid(),
+                id: toolResultId,
                 role: "tool",
                 content: [
                   {
@@ -286,7 +420,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
 
           return (
             <BotCard>
-              <PollCard />
+              <PollCard messageId={toolResultId} />
             </BotCard>
           );
         },
@@ -295,11 +429,17 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
         description:
           "Show users the manifesto comparator between political parties",
         parameters: z.object({}),
-        generate: async function* ({ }) {
+        generate: async function* ({}) {
           yield (
             <BotCard>
               <LaodingSkeleton
-                loadingTitles={['Analyzing Candidates', 'Comparing Manifestos', 'Organizing Data', 'Finalizing Results', 'Almost There!']}
+                loadingTitles={[
+                  "Analyzing Candidates",
+                  "Comparing Manifestos",
+                  "Organizing Data",
+                  "Finalizing Results",
+                  "Almost There!",
+                ]}
               />
             </BotCard>
           );
@@ -333,15 +473,14 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
               console.log((messages.data[0]?.content[0] as any).text.value);
               return (messages.data[0]?.content[0] as any).text.value;
             } else {
-
               // wait 1 second
               await new Promise((resolve) => {
                 setTimeout(() => {
                   resolve("");
-                }, 1000)
-              })
+                }, 1000);
+              });
 
-              return await checkStatusAndPrintMessages(threadId, runId)
+              return await checkStatusAndPrintMessages(threadId, runId);
               console.log("Run is not completed yet.");
             }
           };
@@ -368,7 +507,8 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
 
           aiState.done({
             ...aiState.get(),
-            suggestions: ["What is the agriculture vision by Sajith",
+            suggestions: [
+              "What is the agriculture vision by Sajith",
               "What are the steps should I follow to vote?",
             ],
             messages: [
@@ -409,17 +549,20 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
         },
       },
 
-
-
       showManifesto: {
-        description:
-          "Show users the manifesto of a candidate",
+        description: "Show users the manifesto of a candidate",
         parameters: z.object({}),
-        generate: async function* ({ }) {
+        generate: async function* ({}) {
           yield (
             <BotCard>
               <LaodingSkeleton
-                loadingTitles={['Analyzing Candidate', 'Analyzing Manifesto', 'Organizing Data', 'Finalizing Results', 'Almost There!']}
+                loadingTitles={[
+                  "Analyzing Candidate",
+                  "Analyzing Manifesto",
+                  "Organizing Data",
+                  "Finalizing Results",
+                  "Almost There!",
+                ]}
               />
             </BotCard>
           );
@@ -455,15 +598,15 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
               console.log((messages.data[0]?.content[0] as any).text.value);
               return (messages.data[0]?.content[0] as any).text.value;
             } else {
-              // wait for 1 second 
+              // wait for 1 second
               // wait 1 second
               await new Promise((resolve) => {
                 setTimeout(() => {
                   resolve("");
-                }, 300)
-              })
+                }, 300);
+              });
 
-              return await checkStatusAndPrintMessages(threadId, runId)
+              return await checkStatusAndPrintMessages(threadId, runId);
 
               console.log("Run is not completed yet.");
             }
@@ -475,10 +618,11 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
             delay: number,
           ): Promise<string> {
             return new Promise(async (resolve) => {
-
-              const response = await checkStatusAndPrintMessages(threadId, runId);
+              const response = await checkStatusAndPrintMessages(
+                threadId,
+                runId,
+              );
               resolve(response);
-
             });
           }
 
@@ -493,7 +637,10 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
 
           aiState.done({
             ...aiState.get(),
-            suggestions: ["What are the steps should I follow to vote?", "I want to take part in the poll"],
+            suggestions: [
+              "What are the steps should I follow to vote?",
+              "I want to take part in the poll",
+            ],
             messages: [
               ...aiState.get().messages,
               {
@@ -516,8 +663,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                     type: "tool-result",
                     toolName: "showManifesto",
                     toolCallId,
-                    result:
-                      "User was shown a manifesto",
+                    result: "User was shown a manifesto",
                   },
                 ],
               },
@@ -532,26 +678,30 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
         },
       },
       newsReader: {
-        description:
-          "Show users the trusted news article related to the query",
+        description: "Show users the trusted news article related to the query",
         parameters: z.object({}),
-        generate: async function* ({ }) {
+        generate: async function* ({}) {
           yield (
             <BotCard>
               <LaodingSkeleton
-                loadingTitles={['Searching for News', 'Filtering News']}
+                loadingTitles={["Searching for News", "Filtering News"]}
               />
             </BotCard>
           );
 
           const toolCallId = nanoid();
 
-          const data = await getNews(aiState.get().messages.at(-1)?.content.toString()!);
+          const data = await getNews(
+            aiState.get().messages.at(-1)?.content.toString()!,
+          );
 
           if (data.length === 0) {
             aiState.done({
               ...aiState.get(),
-              suggestions: ['What is the current situation of the election', 'What are the anti corruption measures by Anura and Saith'],
+              suggestions: [
+                "What is the current situation of the election",
+                "What are the anti corruption measures by Anura and Saith",
+              ],
               messages: [
                 ...aiState.get().messages,
                 {
@@ -574,8 +724,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                       type: "tool-result",
                       toolName: "newsReader",
                       toolCallId,
-                      result:
-                        "No relevant news articles found",
+                      result: "No relevant news articles found",
                     },
                   ],
                 },
@@ -583,9 +732,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
             });
             return (
               <BotCard>
-                <div className="flex">
-                  No articles were found
-                </div>
+                <div className="flex">No articles were found</div>
               </BotCard>
             );
           }
@@ -614,8 +761,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                     type: "tool-result",
                     toolName: "newsReader",
                     toolCallId,
-                    result:
-                      "User was shown news articles",
+                    result: "User was shown news articles",
                   },
                 ],
               },
@@ -632,24 +778,29 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
         },
       },
 
-
-
       winPredictor: {
         description:
           "Show users the winning prediction of the 2024 sri lankas presidential election",
         parameters: z.object({}),
-        generate: async function* ({ }) {
+        generate: async function* ({}) {
           yield (
             <BotCard>
               <LaodingSkeleton
-                loadingTitles={['Searching for News', 'Analyzing Data', 'Predicting Results', 'Finalizing Results']}
+                loadingTitles={[
+                  "Searching for News",
+                  "Analyzing Data",
+                  "Predicting Results",
+                  "Finalizing Results",
+                ]}
               />
             </BotCard>
           );
 
           const toolCallId = nanoid();
 
-          const data = await getNews("news IHP prediction about 2024 presidential election september");
+          const data = await getNews(
+            "news IHP prediction about 2024 presidential election september",
+          );
           let extractedText = "";
           try {
             const response = await fetch(data[0]!.link);
@@ -660,7 +811,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
             while ((matches = paragraphRegex.exec(html)) !== null) {
               let content = matches[1];
               content = content!.replace(/<\/?[^>]+(>|$)/g, "");
-              content = content!.replace(/\s+/g, ' ').trim();
+              content = content!.replace(/\s+/g, " ").trim();
               extractedText += content + " ";
             }
           } catch (error) {
@@ -668,11 +819,13 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
             extractedText = "";
           }
 
-
           if (extractedText.trim().length === 0) {
             aiState.done({
               ...aiState.get(),
-              suggestions: ['Is Anura have a plan about cultural development?', 'What are the steps should I follow to vote?'],
+              suggestions: [
+                "Is Anura have a plan about cultural development?",
+                "What are the steps should I follow to vote?",
+              ],
               messages: [
                 ...aiState.get().messages,
                 {
@@ -695,8 +848,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                       type: "tool-result",
                       toolName: "winPredictor",
                       toolCallId,
-                      result:
-                        "No valid prediction found",
+                      result: "No valid prediction found",
                     },
                   ],
                 },
@@ -704,18 +856,17 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
             });
             return (
               <BotCard>
-                <div className="flex">
-                  No valid prediction found!
-                </div>
+                <div className="flex">No valid prediction found!</div>
               </BotCard>
             );
           }
 
-
           const openai = new OpenAI();
           const completion = await openai.chat.completions.create({
-            messages: [{
-              "role": "system", "content": `
+            messages: [
+              {
+                role: "system",
+                content: `
                     Role:
                     You are a election related win predictor chat bot.
 
@@ -741,13 +892,16 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                     1. You are not allowed to talk about anything other than the 2024 Sri Lanka Presidential Election.
                     2. You cannot provide false information.
                     3. You cannot provide any prediction without analyzing the news article.
-              `},
-            {
-              "role": "user", "content": `
+              `,
+              },
+              {
+                role: "user",
+                content: `
                   
                   User Query: ${aiState.get().messages.at(-1)?.content.toString()!}
                   Article: ${extractedText.trim()}
-                  `},
+                  `,
+              },
             ],
             model: "gpt-4o",
             temperature: 0.2,
@@ -755,10 +909,12 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
 
           console.log(completion.choices[0]);
 
-
           aiState.done({
             ...aiState.get(),
-            suggestions: ['Is Anura have a plan about cultural development?', 'What are the steps should I follow to vote?'],
+            suggestions: [
+              "Is Anura have a plan about cultural development?",
+              "What are the steps should I follow to vote?",
+            ],
             messages: [
               ...aiState.get().messages,
               {
@@ -781,14 +937,12 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                     type: "tool-result",
                     toolName: "winPredictor",
                     toolCallId,
-                    result: completion.choices[0]?.message.content!
-                    ,
+                    result: completion.choices[0]?.message.content!,
                   },
                 ],
               },
             ],
           });
-
 
           return (
             <BotCard>
@@ -808,9 +962,7 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
         generate: async function* ({ resultId, location }) {
           yield (
             <BotCard>
-              <LaodingSkeleton
-                loadingTitles={['Getting Your Results']}
-              />
+              <LaodingSkeleton loadingTitles={["Getting Your Results"]} />
             </BotCard>
           );
 
@@ -818,14 +970,22 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
 
           const results = await api.electionResult.getResults();
 
-          var result: undefined | { anura: number, ranil: number, sajith: number, location: string, id: string };
+          var result:
+            | undefined
+            | {
+                anura: number;
+                ranil: number;
+                sajith: number;
+                location: string;
+                id: string;
+              };
           if (resultId) {
             result = results.find((r) => r.id === resultId);
           } else if (location) {
             result = results.find((r) => r.location === location);
           }
 
-          console.log("Result of election", result)
+          console.log("Result of election", result);
 
           if (!result) {
             aiState.done({
@@ -852,22 +1012,19 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                       type: "tool-result",
                       toolName: "showElectionResult",
                       toolCallId,
-                      result:
-                        "No election results found",
+                      result: "No election results found",
                     },
                   ],
                 },
               ],
             });
 
-            return <BotCard>
-              <div className="flex">
-                No election results found!
-              </div>
-            </BotCard>
-
+            return (
+              <BotCard>
+                <div className="flex">No election results found!</div>
+              </BotCard>
+            );
           }
-
 
           aiState.done({
             ...aiState.get(),
@@ -893,15 +1050,12 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                     type: "tool-result",
                     toolName: "showElectionResult",
                     toolCallId,
-                    result:
-                      `User was shown election result id ${result.id} for location ${result.location}. Result is Anura - ${result.anura}, Ranil - ${result.ranil}, Sajith - ${result.sajith}`,
+                    result: `User was shown election result id ${result.id} for location ${result.location}. Result is Anura - ${result.anura}, Ranil - ${result.ranil}, Sajith - ${result.sajith}`,
                   },
                 ],
               },
             ],
           });
-
-
 
           return (
             <BotCard>
@@ -912,24 +1066,18 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
       },
 
       overAllElectionResult: {
-        description:
-          "Shows the user result of the election till now",
-        parameters: z.object({
-
-        }),
-        generate: async function* ({ }) {
+        description: "Shows the user result of the election till now",
+        parameters: z.object({}),
+        generate: async function* ({}) {
           yield (
             <BotCard>
-              <LaodingSkeleton
-                loadingTitles={['Getting Your Results']}
-              />
+              <LaodingSkeleton loadingTitles={["Getting Your Results"]} />
             </BotCard>
           );
 
           const toolCallId = nanoid();
 
           const results = await api.electionResult.getResults();
-
 
           if (results.length === 0) {
             aiState.done({
@@ -956,20 +1104,18 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                       type: "tool-result",
                       toolName: "showElectionResult",
                       toolCallId,
-                      result:
-                        "No election results found",
+                      result: "No election results found",
                     },
                   ],
                 },
               ],
             });
 
-            return <BotCard>
-              <div className="flex">
-                No election results found!
-              </div>
-            </BotCard>
-
+            return (
+              <BotCard>
+                <div className="flex">No election results found!</div>
+              </BotCard>
+            );
           }
 
           var result = {
@@ -977,14 +1123,11 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
             ranil: results.reduce((acc, r) => acc + r.ranil, 0),
             sajith: results.reduce((acc, r) => acc + r.sajith, 0),
             location: "Overall",
-          }
-
-
-
+          };
 
           aiState.done({
             ...aiState.get(),
-            suggestions: ["What are the steps should I follow to vote?",],
+            suggestions: ["What are the steps should I follow to vote?"],
             messages: [
               ...aiState.get().messages,
               {
@@ -1007,15 +1150,12 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
                     type: "tool-result",
                     toolName: "overAllElectionResult",
                     toolCallId,
-                    result:
-                      `User was shown overall election result Anura - ${result.anura}, Ranil - ${result.ranil}, Sajith - ${result.sajith}`,
+                    result: `User was shown overall election result Anura - ${result.anura}, Ranil - ${result.ranil}, Sajith - ${result.sajith}`,
                   },
                 ],
               },
             ],
           });
-
-
 
           return (
             <BotCard>
@@ -1025,7 +1165,6 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
         },
       },
     },
-
   });
 
   return {
@@ -1034,14 +1173,13 @@ async function submitUserMessage(content: string, role: "user" | "system" = "use
   };
 }
 
-
 async function voteForCandidate(candiateName: string) {
-  'use server'
+  "use server";
 
-  const aiState = getMutableAIState<typeof AI>()
+  const aiState = getMutableAIState<typeof AI>();
 
-  let textStream: undefined | ReturnType<typeof createStreamableValue<string>>
-  let textNode: undefined | React.ReactNode
+  let textStream: undefined | ReturnType<typeof createStreamableValue<string>>;
+  let textNode: undefined | React.ReactNode;
 
   aiState.done({
     ...aiState.get(),
@@ -1049,36 +1187,35 @@ async function voteForCandidate(candiateName: string) {
       ...aiState.get().messages,
       {
         id: nanoid(),
-        role: 'system',
-        content: `[User has voted ${candiateName}. User is now shown the results for poll. The results are for Anura - 207, Ranil - 305, Sajith - 60]`
-      }
+        role: "system",
+        content: `[User has voted ${candiateName}. User is now shown the results for poll. The results are for Anura - 207, Ranil - 305, Sajith - 60]`,
+      },
     ],
-    suggestions: ["Break down the results of the poll",
+    suggestions: [
+      "Break down the results of the poll",
       "What are the steps should I follow to vote?",
     ],
-  })
+  });
 }
 
 async function clearChat() {
-  'use server'
+  "use server";
 
-  const aiState = getMutableAIState<typeof AI>()
-
+  const aiState = getMutableAIState<typeof AI>();
 
   aiState.done({
     ...aiState.get(),
-    messages: [
-    ],
-    suggestions: [
-    ],
-  })
+    messages: [],
+    suggestions: [],
+  });
 }
 
 export type AIState = {
-  chatId: string
-  messages: Message[],
-  suggestions: string[]
-}
+  chatId: string;
+  messages: Message[];
+  suggestions: string[];
+  steps: string[];
+};
 
 export type UIState = {
   id: string;
@@ -1089,12 +1226,19 @@ export const AI = createAI<AIState, UIState>({
   actions: {
     submitUserMessage,
     voteForCandidate,
-    clearChat
+    clearChat,
+    checkForRemainingSteps,
+    checkIfLastMessage,
   },
   initialUIState: [],
-  initialAIState: { chatId: nanoid(), messages: [], suggestions: [] },
+  initialAIState: {
+    chatId: nanoid(),
+    messages: [],
+    suggestions: [],
+    steps: [],
+  },
   onGetUIState: async () => {
-    'use server'
+    "use server";
 
     const session = await getServerAuthSession();
 

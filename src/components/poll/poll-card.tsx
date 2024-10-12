@@ -1,180 +1,204 @@
-'use client'
+"use client";
 
-import dynamic from 'next/dynamic'
-import { Button } from '../ui/button'
-import { motion, AnimatePresence } from 'framer-motion'
-import React from 'react'
-import { PollResult } from "./poll-result"
-import { useActions, useAIState, useUIState } from 'ai/rsc'
+import dynamic from "next/dynamic";
+import { Button } from "../ui/button";
+import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
+import { PollResult } from "./poll-result";
+import { useActions, useAIState, useUIState } from "ai/rsc";
 
-export const PollCard = () => {
-    const [isVoted, setIsVoted] = React.useState(false)
-    const { voteForCandidate } = useActions()
+import { type AI } from "@/lib/chat/actions";
 
-    const onVote = () => {
-        setTimeout(() => {
-            setIsVoted(true)
-            voteForCandidate("Ranil")
-        }, 3000)
-    }
+export const PollCard = ({ messageId }: { messageId: string }) => {
+  const [isVoted, setIsVoted] = React.useState(false);
+  const { voteForCandidate } = useActions();
+  const { submitUserMessage, checkForRemainingSteps, checkIfLastMessage } =
+    useActions();
+  const [messages, setMessages] = useUIState<typeof AI>();
 
-    return <AnimatePresence mode="popLayout">
-        {isVoted && <PollResult />}
+  const onVote = () => {
+    setTimeout(() => {
+      setIsVoted(true);
+      voteForCandidate("Ranil");
 
-        {isVoted == false && <motion.div
-            layoutId='poll-card'
-            className="flex flex-col items-center w-full"
-            initial={{
-                opacity: 0.0,
-                y: 10
-            }}
-            animate={{
-                opacity: 1.0,
-                y: 0
-            }}
-            exit={{
-                opacity: 0.0,
-                y: 10
-            }}
+      const lol = async () => {
+        const isLastMessage = await checkIfLastMessage(messageId);
 
+        if (isLastMessage === false) return;
+
+        const remainingSteps = await checkForRemainingSteps();
+
+        if (remainingSteps.length > 0) {
+          // Submit and get response message
+          const responseMessage = await submitUserMessage(remainingSteps[0]!);
+          setMessages((currentMessages) => [
+            ...currentMessages,
+            responseMessage,
+          ]);
+        }
+      };
+      lol();
+    }, 3000);
+  };
+
+  return (
+    <AnimatePresence mode="popLayout">
+      {isVoted && <PollResult messageId={messageId} />}
+
+      {isVoted == false && (
+        <motion.div
+          layoutId="poll-card"
+          className="flex w-full flex-col items-center"
+          initial={{
+            opacity: 0.0,
+            y: 10,
+          }}
+          animate={{
+            opacity: 1.0,
+            y: 0,
+          }}
+          exit={{
+            opacity: 0.0,
+            y: 10,
+          }}
         >
-            <h1 className="text-[24px] font-bold ">Make Your Vote</h1>
-            <div className="flex w-full space-x-2 ">
-                <PollItem
-                    name='RANIL'
-                    image='/graphics/poll-card-ranil.png'
-                    backgroundColor='#54BA43'
-                    nameColor='#153601'
-                    imageWidth='80%'
-                    onVoted={onVote}
-                />
-                <PollItem
-                    name='ANURA'
-                    image='/graphics/poll-card-anura.png'
-                    backgroundColor='#9A0B25'
-                    nameColor='#2F0014'
-                    imageWidth='100%'
-                    onVoted={onVote}
-                />
-                <PollItem
-                    name='SAJITH'
-                    image='/graphics/poll-card-sajith.png'
-                    backgroundColor='#0CBF7F'
-                    nameColor='#0A3103'
-                    imageWidth='100%'
-                    onVoted={onVote}
-                />
-            </div>
-        </motion.div>}
+          <h1 className="text-[24px] font-bold">Make Your Vote</h1>
+          <div className="flex w-full space-x-2">
+            <PollItem
+              name="RANIL"
+              image="/graphics/poll-card-ranil.png"
+              backgroundColor="#54BA43"
+              nameColor="#153601"
+              imageWidth="80%"
+              onVoted={onVote}
+            />
+            <PollItem
+              name="ANURA"
+              image="/graphics/poll-card-anura.png"
+              backgroundColor="#9A0B25"
+              nameColor="#2F0014"
+              imageWidth="100%"
+              onVoted={onVote}
+            />
+            <PollItem
+              name="SAJITH"
+              image="/graphics/poll-card-sajith.png"
+              backgroundColor="#0CBF7F"
+              nameColor="#0A3103"
+              imageWidth="100%"
+              onVoted={onVote}
+            />
+          </div>
+        </motion.div>
+      )}
     </AnimatePresence>
-
-}
-
-
+  );
+};
 
 function PollItem({
-    name,
-    image,
-    backgroundColor,
-    nameColor,
-    imageWidth,
-    onVoted
+  name,
+  image,
+  backgroundColor,
+  nameColor,
+  imageWidth,
+  onVoted,
 }: {
-    name: string,
-    image: string,
-    backgroundColor: string,
-    nameColor: string,
-    imageWidth: string,
-    onVoted: () => void
+  name: string;
+  image: string;
+  backgroundColor: string;
+  nameColor: string;
+  imageWidth: string;
+  onVoted: () => void;
 }) {
-    const [isSelected, setIsSelected] = React.useState(false)
+  const [isSelected, setIsSelected] = React.useState(false);
 
-    const onClick = () => {
-        setIsSelected(true)
-        onVoted()
-    }
+  const onClick = () => {
+    setIsSelected(true);
+    onVoted();
+  };
 
-
-
-    return <motion.div className="relative w-full rounded-[5px]"
-        whileHover={isSelected ? "" : "hover"}
-        style={{
-            backgroundImage: `url(/graphics/poll-card-background.png)`,
-            backgroundSize: "cover",
-            aspectRatio: "604/884",
-            backgroundColor: backgroundColor
-        }}
+  return (
+    <motion.div
+      className="relative w-full rounded-[5px]"
+      whileHover={isSelected ? "" : "hover"}
+      style={{
+        backgroundImage: `url(/graphics/poll-card-background.png)`,
+        backgroundSize: "cover",
+        aspectRatio: "604/884",
+        backgroundColor: backgroundColor,
+      }}
     >
-        <motion.div className="absolute w-full h-full"
-            initial={{
-                backgroundColor: "#000000a3",
-            }}
-            animate={isSelected ? "selected" : ""}
+      <motion.div
+        className="absolute h-full w-full"
+        initial={{
+          backgroundColor: "#000000a3",
+        }}
+        animate={isSelected ? "selected" : ""}
+        variants={{
+          selected: {
+            backgroundColor: "#00000000",
+          },
+        }}
+      ></motion.div>
 
-            variants={{
-                selected: {
-                    backgroundColor: "#00000000"
-                }
-            }}
+      <div className="absolute bottom-[67%] flex w-full justify-center">
+        <motion.p
+          className="text-4xl font-bold"
+          style={{
+            color: nameColor,
+          }}
+          animate={isSelected ? "selected" : ""}
+          initial={{
+            opacity: 0.0,
+            y: 10,
+          }}
+          variants={{
+            selected: {
+              opacity: 1.0,
+              y: 0,
+            },
+          }}
         >
+          {name}
+        </motion.p>
+      </div>
 
+      <img
+        className="absolute bottom-0 left-0"
+        style={{
+          width: imageWidth,
+        }}
+        src={image}
+      />
+
+      <div className=""></div>
+
+      <div className="absolute bottom-4 flex w-full">
+        <motion.div
+          className="flex w-full justify-center"
+          animate={{
+            opacity: 0.0,
+            y: 10,
+          }}
+          initial={{
+            opacity: 0.0,
+            y: 10,
+          }}
+          variants={{
+            hover: {
+              opacity: 1.0,
+              y: 0,
+            },
+          }}
+        >
+          <Button
+            onClick={onClick}
+            className="bg-[#1C9645] hover:bg-[#1C9645A3]"
+          >
+            Vote for {name}
+          </Button>
         </motion.div>
-
-        <div className="flex absolute w-full justify-center bottom-[67%]">
-            <motion.p className=' font-bold text-4xl'
-                style={{
-                    color: nameColor
-                }}
-                animate={isSelected ? "selected" : ""}
-                initial={{
-                    opacity: 0.0,
-                    y: 10
-                }}
-                variants={{
-                    selected: {
-                        opacity: 1.0,
-                        y: 0
-                    }
-                }}
-            >
-                {name}
-            </motion.p>
-        </div>
-
-        <img className="absolute bottom-0 left-0 "
-            style={{
-                width: imageWidth
-            }}
-            src={image}
-        />
-
-        <div className=""></div>
-
-
-
-        <div className="absolute bottom-4 flex w-full">
-            <motion.div className="flex w-full justify-center"
-                animate={{
-                    opacity: 0.0,
-                    y: 10
-                }}
-                initial={{
-                    opacity: 0.0,
-                    y: 10
-                }}
-                variants={{
-                    hover: {
-                        opacity: 1.0,
-                        y: 0
-                    }
-                }}
-            >
-                <Button onClick={onClick} className='bg-[#1C9645] hover:bg-[#1C9645A3]'>
-                    Vote for {name}
-                </Button>
-            </motion.div>
-        </div>
-
-
+      </div>
     </motion.div>
+  );
 }

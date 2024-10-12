@@ -1,75 +1,72 @@
-'use client'
+"use client";
 
-import * as React from 'react'
-import Textarea from 'react-textarea-autosize'
+import * as React from "react";
+import Textarea from "react-textarea-autosize";
 
-import { useActions, useUIState } from 'ai/rsc'
+import { useActions, useUIState } from "ai/rsc";
 
-import { UserMessage } from './stocks/message'
-import { type AI } from '@/lib/chat/actions'
-import { Button } from '@/components/ui/button'
-import { IconArrowElbow, IconPlus } from '@/components/ui/icons'
+import { UserMessage } from "./stocks/message";
+import { type AI } from "@/lib/chat/actions";
+import { Button } from "@/components/ui/button";
+import { IconArrowElbow, IconPlus } from "@/components/ui/icons";
 import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
-import { useEnterSubmit } from '@/lib/hooks/use-enter-submit'
-import { nanoid } from 'nanoid'
-import { useRouter } from 'next/navigation'
-import { TrashIcon } from 'lucide-react'
-import { api } from '@/trpc/react'
-import { toast } from 'sonner'
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useEnterSubmit } from "@/lib/hooks/use-enter-submit";
+import { nanoid } from "nanoid";
+import { useRouter } from "next/navigation";
+import { TrashIcon } from "lucide-react";
+import { api } from "@/trpc/react";
+import { toast } from "sonner";
 
 export function PromptForm({
   input,
-  setInput
+  setInput,
 }: {
-  input: string
-  setInput: (value: string) => void
+  input: string;
+  setInput: (value: string) => void;
 }) {
-  const router = useRouter()
-  const { formRef, onKeyDown } = useEnterSubmit()
-  const inputRef = React.useRef<HTMLTextAreaElement>(null)
-  const { submitUserMessage, clearChat } = useActions()
-  const [_, setMessages] = useUIState<typeof AI>()
+  const router = useRouter();
+  const { formRef, onKeyDown } = useEnterSubmit();
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
+  const { submitUserMessage, clearChat } = useActions();
+  const [_, setMessages] = useUIState<typeof AI>();
 
   React.useEffect(() => {
     if (inputRef.current) {
-      inputRef.current.focus()
+      inputRef.current.focus();
     }
-  }, [])
-
-
-
+  }, []);
 
   return (
     <form
       ref={formRef}
       onSubmit={async (e: any) => {
-        e.preventDefault()
+        e.preventDefault();
 
         // Blur focus on mobile
         if (window.innerWidth < 600) {
-          e.target['message']?.blur()
+          e.target["message"]?.blur();
         }
 
-        const value = input.trim()
-        setInput('')
-        if (!value) return
+        const value = input.trim();
+        setInput("");
+        if (!value) return;
 
         // Optimistically add user message UI
-        setMessages(currentMessages => [
+        setMessages((currentMessages) => [
           ...currentMessages,
           {
             id: nanoid(),
-            display: <UserMessage>{value}</UserMessage>
-          }
-        ])
+            display: <UserMessage>{value}</UserMessage>,
+          },
+        ]);
 
         // Submit and get response message
-        const responseMessage = await submitUserMessage(value)
-        setMessages(currentMessages => [...currentMessages, responseMessage])
+        const responseMessage = await submitUserMessage(value);
+        setMessages((currentMessages) => [...currentMessages, responseMessage]);
       }}
     >
       <ElectionResultToast />
@@ -103,47 +100,90 @@ export function PromptForm({
           name="message"
           rows={1}
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={(e) => setInput(e.target.value)}
         />
         <div className="absolute right-0 top-[13px] sm:right-4">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button type="submit" size="icon" disabled={input === ''}>
+              <Button type="submit" size="icon" disabled={input === ""}>
                 <IconArrowElbow />
                 <span className="sr-only">Send message</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>Send message</TooltipContent>
           </Tooltip>
-
-
         </div>
       </div>
     </form>
-  )
+  );
 }
 
-
 function ElectionResultToast() {
-  const { submitUserMessage } = useActions()
-  const [_, setMessages] = useUIState<typeof AI>()
-  const getNewResultQuery = api.electionResult.getNewResult.useQuery(undefined, {
-    refetchInterval: 2000
-  })
+  const { submitUserMessage } = useActions();
+  const [_, setMessages] = useUIState<typeof AI>();
+  const getNewResultQuery = api.electionResult.getNewResult.useQuery(
+    undefined,
+    {
+      refetchInterval: 2000,
+    },
+  );
 
   React.useEffect(() => {
-    if (!getNewResultQuery.data) return
+    if (!getNewResultQuery.data) return;
 
     toast.info(`New election result for ${getNewResultQuery.data.location}!`, {
-      action: <Button onClick={async () => {
-        const responseMessage = await submitUserMessage('Show the user election result for id : ' + getNewResultQuery.data!.id, "system")
+      action: (
+        <Button
+          onClick={async () => {
+            const responseMessage = await submitUserMessage(
+              "Show the user election result for id : " +
+                getNewResultQuery.data!.id,
+              "system",
+            );
 
-        setMessages(currentMessages => [...currentMessages, responseMessage])
-      }}>
-        View
-      </Button>
-    })
-  }, [getNewResultQuery.data])
+            setMessages((currentMessages) => [
+              ...currentMessages,
+              responseMessage,
+            ]);
+          }}
+        >
+          View
+        </Button>
+      ),
+    });
+  }, [getNewResultQuery.data]);
 
-  return <></>
+  return <></>;
+}
+
+export function TriggerRemainingSuggestion({
+  messageId,
+}: {
+  messageId: string;
+}) {
+  const { submitUserMessage, checkForRemainingSteps, checkIfLastMessage } =
+    useActions();
+  const [messages, setMessages] = useUIState<typeof AI>();
+
+  React.useEffect(() => {
+    // if (messages[messages.length - 1]?.id != messageId) {
+    //   return;
+    // }
+    const lol = async () => {
+      // const isLastMessage = await checkIfLastMessage(messageId);
+
+      // if (isLastMessage === false) return;
+
+      const remainingSteps = await checkForRemainingSteps();
+
+      if (remainingSteps.length > 0) {
+        // Submit and get response message
+        const responseMessage = await submitUserMessage(remainingSteps[0]!);
+        setMessages((currentMessages) => [...currentMessages, responseMessage]);
+      }
+    };
+    lol();
+  }, []);
+
+  return <></>;
 }
