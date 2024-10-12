@@ -18,6 +18,8 @@ import { useEnterSubmit } from '@/lib/hooks/use-enter-submit'
 import { nanoid } from 'nanoid'
 import { useRouter } from 'next/navigation'
 import { TrashIcon } from 'lucide-react'
+import { api } from '@/trpc/react'
+import { toast } from 'sonner'
 
 export function PromptForm({
   input,
@@ -37,6 +39,9 @@ export function PromptForm({
       inputRef.current.focus()
     }
   }, [])
+
+
+
 
   return (
     <form
@@ -67,6 +72,7 @@ export function PromptForm({
         setMessages(currentMessages => [...currentMessages, responseMessage])
       }}
     >
+      <ElectionResultToast />
       <div className="relative flex max-h-60 w-full grow flex-col overflow-hidden bg-background px-8 sm:rounded-md sm:border sm:px-12">
         {/* <Tooltip>
           <TooltipTrigger asChild>
@@ -109,8 +115,35 @@ export function PromptForm({
             </TooltipTrigger>
             <TooltipContent>Send message</TooltipContent>
           </Tooltip>
+
+
         </div>
       </div>
     </form>
   )
+}
+
+
+function ElectionResultToast() {
+  const { submitUserMessage } = useActions()
+  const [_, setMessages] = useUIState<typeof AI>()
+  const getNewResultQuery = api.electionResult.getNewResult.useQuery(undefined, {
+    refetchInterval: 2000
+  })
+
+  React.useEffect(() => {
+    if (!getNewResultQuery.data) return
+
+    toast.info(`New election result for ${getNewResultQuery.data.location}!`, {
+      action: <Button onClick={async () => {
+        const responseMessage = await submitUserMessage('Show the user election result for id : ' + getNewResultQuery.data!.id, "system")
+
+        setMessages(currentMessages => [...currentMessages, responseMessage])
+      }}>
+        View
+      </Button>
+    })
+  }, [getNewResultQuery.data])
+
+  return <></>
 }
